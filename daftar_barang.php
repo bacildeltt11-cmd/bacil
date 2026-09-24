@@ -137,13 +137,13 @@ if (empty($barang_list)) {
     }
     ?>
     <?php if ($is_admin): ?>
-    <div style="background:#fff8e1; border-left:5px solid #ff9800; padding:18px 22px; border-radius:12px; margin-bottom:25px;">
+    <div class="add-barang-box" style="background:#fff8e1; border-left:5px solid #ff9800; padding:18px 22px; border-radius:12px; margin-bottom:25px;">
         <strong style="color:#e65100;">Tambah Barang Baru</strong>
-        <form method="POST" style="margin-top:10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <form method="POST" class="add-barang-form" style="margin-top:10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <input type="hidden" name="csrf_token" value="<?php echo e($_SESSION['csrf_token']); ?>">
-            <input type="text" name="nama_barang" class="form-control" placeholder="Contoh: Durian, Jeruk, dll" required style="max-width:320px; width:100%;" autocomplete="off">
-            <input type="number" name="pcs" class="form-control" placeholder="PCS (angka)" min="0" required style="max-width:120px; width:100%;">
-            <button type="submit" name="add_barang" class="btn btn-primary" style="padding:10px 22px;">+ Tambahkan ke Daftar</button>
+            <input type="text" name="nama_barang" class="form-control" placeholder="Contoh: Durian, Jeruk, dll" required autocomplete="off">
+            <input type="number" name="pcs" class="form-control" placeholder="PCS (angka)" min="0" required>
+            <button type="submit" name="add_barang" class="btn btn-primary">+ Tambahkan ke Daftar</button>
         </form>
         <small style="color:#856404; display:block; margin-top:8px;">Admin dapat menambahkan nama barang baru yang akan tersedia untuk dipilih saat input muatan.</small>
     </div>
@@ -161,29 +161,31 @@ if (empty($barang_list)) {
             </div>
         </div>
         <?php if (!empty($barang_list)): ?>
+        <div class="table-wrapper">
         <table id="barang-table" class="barang-table" style="width:100%; border-collapse:collapse;">
             <thead>
                 <tr style="background:#f0f4f8;">
-                    <th style="padding:8px; text-align:left;">Nama Barang</th>
-                    <th style="padding:8px; text-align:left;">PCS</th>
-                    <?php if ($is_admin): ?><th style="padding:8px;">Aksi</th><?php endif; ?>
+                    <th style="padding:10px; text-align:left;">Nama Barang</th>
+                    <th style="padding:10px; text-align:left;">PCS</th>
+                    <?php if ($is_admin): ?><th style="padding:10px; text-align:center;">Aksi</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($barang_list as $item): ?>
                 <tr data-name="<?php echo htmlspecialchars(strtolower($item['nama'])); ?>">
-                    <td style="padding:8px; border-bottom:1px solid #eee;"><?php echo e($item['nama']); ?></td>
-                    <td style="padding:8px; border-bottom:1px solid #eee;"><?php echo e($item['pcs']); ?></td>
+                    <td style="padding:10px; border-bottom:1px solid #eee;"><?php echo e($item['nama']); ?></td>
+                    <td style="padding:10px; border-bottom:1px solid #eee;"><?php echo e($item['pcs']); ?></td>
                     <?php if ($is_admin): ?>
-                    <td style="padding:8px; border-bottom:1px solid #eee;">
-                        <a href="javascript:void(0);" class="edit" data-nama="<?php echo e($item['nama']); ?>" data-pcs="<?php echo e($item['pcs']); ?>" style="margin-right:8px; color:#1565c0; font-weight:600; text-decoration:none;" title="Edit PCS">✎</a>
-                        <a href="?hapus=<?php echo urlencode($item['nama']); ?>" class="del" onclick="return confirm('Hapus \"<?php echo e($item['nama']); ?>\" dari daftar?')">×</a>
+                    <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">
+                        <a href="javascript:void(0);" class="edit" data-nama="<?php echo e($item['nama']); ?>" data-pcs="<?php echo e($item['pcs']); ?>" style="margin-right:12px; color:#1565c0; font-weight:700; text-decoration:none; font-size:16px;" title="Edit PCS">✎</a>
+                        <a href="?hapus=<?php echo urlencode($item['nama']); ?>" class="del" style="color:#e53935; font-weight:700; font-size:18px; text-decoration:none;" onclick="return confirm('Hapus \"<?php echo e($item['nama']); ?>\" dari daftar?')">×</a>
                     </td>
                     <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         <?php else: ?>
         <p style="color:#888;">Belum ada daftar barang.</p>
         <?php endif; ?>

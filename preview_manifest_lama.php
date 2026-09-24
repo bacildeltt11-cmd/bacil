@@ -105,6 +105,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
             </div>
         </div>
 
+<div class="table-wrapper">
     <table>
     <thead>
     <tr>
@@ -157,6 +158,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
     </tr>
     </tfoot>
     </table>
+    </div>
 
     <div class="footer">
         <div class="footer-content">

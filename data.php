@@ -74,8 +74,8 @@ if (!empty($_GET['tgl_mulai']) && !empty($_GET['tgl_selesai'])) {
 <div class="container">
     <h3 class="header-title">Riwayat Manifest Cargo</h3>
     
-    <div style="background: #f9fbff; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border-color);">
-        <form method="GET" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+    <div class="filter-card" style="background: #f9fbff; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border-color);">
+        <form method="GET" class="filter-form" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                 <label>Nama Kapal</label>
                 <input type="text" name="kapal" class="form-control" placeholder="Cari kapal..." value="<?= e($_GET['kapal'] ?? '') ?>">
@@ -92,13 +92,14 @@ if (!empty($_GET['tgl_mulai']) && !empty($_GET['tgl_selesai'])) {
                 <label>Sampai Tanggal</label>
                 <input type="date" name="tgl_selesai" class="form-control" value="<?= e($_GET['tgl_selesai'] ?? '') ?>">
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div class="filter-actions" style="display: flex; gap: 10px;">
                 <button type="submit" class="btn btn-primary">🔍 Filter</button>
                 <a href="data.php" class="btn btn-secondary">Reset</a>
             </div>
         </form>
     </div>
     
+    <div class="table-wrapper">
     <table class="table-custom">
         <thead>
             <tr>
@@ -141,6 +142,7 @@ if (!empty($_GET['tgl_mulai']) && !empty($_GET['tgl_selesai'])) {
             ?>
         </tbody>
     </table>
+    </div>
 </div>
 
         </div>

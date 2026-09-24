@@ -167,6 +167,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
         </div>
 </div>
 
+<div class="table-wrapper">
 <table>
 <thead>
 <tr>
@@ -208,6 +209,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
 </tr>
 </tfoot>
 </table>
+</div>
 
 <div class="footer">
     <div class="footer-content">
@@ -219,9 +221,9 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
 
 <div class="actions">
     <a href="input_muatan.php" class="btn-back">← Kembali ke Input</a>
-    <div style="display: flex; gap: 10px;">
+    <div class="action-buttons-group">
         <button class="btn-print" onclick="window.print()">🖨️ Cetak (Browser)</button>
-        <a href="cetak_pdf.php?id=<?= $id_manifest ?>" class="btn-print" style="text-decoration:none; display:inline-block; line-height:20px;">📄 Download PDF</a>
+        <a href="cetak_pdf.php?id=<?= $id_manifest ?>" class="btn-print" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">📄 Download PDF</a>
         <a href="dashboard.php" class="btn-next">Selesai ✓</a>
     </div>
 </div>
