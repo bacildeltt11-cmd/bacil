@@ -147,14 +147,20 @@ function createIndexes() {
     }
 }
 
-// Pastikan user boss default ada
-ensureBossUserExists();
-
-// Call createIndexes when the application initializes (once)
+// Pastikan user boss default ada (hanya jika belum)
 try {
-    createIndexes();
+    ensureBossUserExists();
 } catch (Exception $e) {
-    error_log("Index creation skipped: " . $e->getMessage());
+    error_log("Boss check skipped: " . $e->getMessage());
+}
+
+// createIndexes hanya jika dipanggil via query param ?init_db=1
+if (isset($_GET['init_db']) && $_GET['init_db'] == '1') {
+    try {
+        createIndexes();
+    } catch (Exception $e) {
+        error_log("Index creation skipped: " . $e->getMessage());
+    }
 }
 
 ?>

@@ -1,0 +1,8 @@
+.git
+.env
+.gitignore
+Dockerfile
+blueprint_project.md
+vendor/
+.kilo
+*.log

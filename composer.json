@@ -2,5 +2,10 @@
     "require": {
         "dompdf/dompdf": "^3.1",
         "ext-mongodb": "*"
+    },
+    "config": {
+        "platform": {
+            "ext-mongodb": "1.18.0"
+        }
     }
 }
