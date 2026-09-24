@@ -6,7 +6,8 @@
 // Set working directory to project root directory
 chdir(dirname(__DIR__));
 
-// Initialize serverless functions & session handler
+// Initialize MongoDB & session handler
+require_once 'koneksi_mongodb.php';
 require_once 'functions.php';
 
 // Parse URI path

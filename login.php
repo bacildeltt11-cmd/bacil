@@ -1,6 +1,6 @@
 <?php
-include_once "functions.php";
 include_once "koneksi_mongodb.php";
+include_once "functions.php";
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start([

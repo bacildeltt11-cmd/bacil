@@ -10,6 +10,92 @@ try {
     exit;
 }
 
+/**
+ * MongoDB-backed Session Handler
+ * Stores session data in MongoDB 'sessions' collection for seamless persistence across Vercel serverless containers.
+ */
+class MongoDBSessionHandler implements SessionHandlerInterface {
+    private $client;
+    private $database;
+
+    public function __construct($client, $database) {
+        $this->client = $client;
+        $this->database = $database;
+    }
+
+    public function open(string $path, string $name): bool {
+        return true;
+    }
+
+    public function close(): bool {
+        return true;
+    }
+
+    public function read(string $id): string|false {
+        try {
+            $query = new MongoDB\Driver\Query(['_id' => $id], ['limit' => 1]);
+            $cursor = $this->client->executeQuery("{$this->database}.sessions", $query);
+            $arr = $cursor->toArray();
+            if (!empty($arr) && isset($arr[0]->data)) {
+                return (string)$arr[0]->data;
+            }
+        } catch (\Throwable $e) {
+            error_log("Session read error: " . $e->getMessage());
+        }
+        return '';
+    }
+
+    public function write(string $id, string $data): bool {
+        try {
+            $bulk = new MongoDB\Driver\BulkWrite;
+            $bulk->update(
+                ['_id' => $id],
+                ['$set' => [
+                    'data' => (string)$data,
+                    'updated_at' => new MongoDB\BSON\UTCDateTime()
+                ]],
+                ['upsert' => true]
+            );
+            $this->client->executeBulkWrite("{$this->database}.sessions", $bulk);
+            return true;
+        } catch (\Throwable $e) {
+            error_log("Session write error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function destroy(string $id): bool {
+        try {
+            $bulk = new MongoDB\Driver\BulkWrite;
+            $bulk->delete(['_id' => $id]);
+            $this->client->executeBulkWrite("{$this->database}.sessions", $bulk);
+        } catch (\Throwable $e) {
+            error_log("Session destroy error: " . $e->getMessage());
+        }
+        return true;
+    }
+
+    public function gc(int $max_lifetime): int|false {
+        try {
+            $bulk = new MongoDB\Driver\BulkWrite;
+            $cutoff = new MongoDB\BSON\UTCDateTime((time() - $max_lifetime) * 1000);
+            $bulk->delete(['updated_at' => ['$lt' => $cutoff]]);
+            $this->client->executeBulkWrite("{$this->database}.sessions", $bulk);
+        } catch (\Throwable $e) {
+            // ignore
+        }
+        return 1;
+    }
+}
+
+// Aktifkan MongoDB Session Handler jika session belum berjalan
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_strict_mode', 0);
+    $sessionHandler = new MongoDBSessionHandler($client, $database);
+    session_set_save_handler($sessionHandler, true);
+}
+
 function insertDocument($collection, $document) {
     global $client, $database;
     $bulk = new MongoDB\Driver\BulkWrite;
