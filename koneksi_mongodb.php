@@ -1,4 +1,9 @@
 <?php
+if (defined('KONEKSI_MONGODB_LOADED')) {
+    return;
+}
+define('KONEKSI_MONGODB_LOADED', true);
+
 require_once 'config.php';
 
 $client = new MongoDB\Driver\Manager($mongodb_uri);

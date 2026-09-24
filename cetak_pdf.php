@@ -1,6 +1,11 @@
 <?php
 ob_start();
-session_start();
+require_once 'koneksi_mongodb.php';
+require_once 'functions.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Pengecekan login
 if (!isset($_SESSION['login_rifqy'])) {
@@ -11,8 +16,6 @@ if (!isset($_SESSION['login_rifqy'])) {
 }
 
 require 'vendor/autoload.php';
-include 'koneksi_mongodb.php';
-include 'functions.php';
 
 use Dompdf\Dompdf;
 use Dompdf\Options;

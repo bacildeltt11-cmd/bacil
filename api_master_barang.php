@@ -1,14 +1,17 @@
 <?php
-session_start();
+require_once 'koneksi_mongodb.php';
+require_once 'functions.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Pengecekan login (allow read-only for non-Boss too, but require auth)
 if (!isset($_SESSION['login_rifqy'])) {
+    header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit;
 }
-
-include 'koneksi_mongodb.php';
-include 'functions.php';
 
 header('Content-Type: application/json');
 

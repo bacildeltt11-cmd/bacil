@@ -1,5 +1,10 @@
 <?php
-session_start();
+require_once 'koneksi_mongodb.php';
+require_once 'functions.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Pengecekan login
 if (!isset($_SESSION['login_rifqy'])) {
@@ -7,9 +12,6 @@ if (!isset($_SESSION['login_rifqy'])) {
     header("Location: login.php");
     exit;
 }
-
-include 'koneksi_mongodb.php';
-include 'functions.php';
 
 // Cek apakah ada ID Manifest
 if (!isset($_SESSION['id_manifest'])) {

@@ -5,9 +5,12 @@ header("X-Content-Type-Options: nosniff");
 header("X-XSS-Protection: 1; mode=block");
 header("Referrer-Policy: strict-origin-when-cross-origin");
 
-session_start();
-include 'koneksi_mongodb.php';
-include 'functions.php';
+require_once 'koneksi_mongodb.php';
+require_once 'functions.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Jika belum login (opsional, jika dashboard.php butuh login)
 if(!isset($_SESSION['login_rifqy'])){

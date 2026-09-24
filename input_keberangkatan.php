@@ -1,7 +1,10 @@
 <?php
-session_start();
-include 'koneksi_mongodb.php';
-include 'functions.php';
+require_once 'koneksi_mongodb.php';
+require_once 'functions.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Pengecekan login
 if (!isset($_SESSION['login_rifqy'])) {

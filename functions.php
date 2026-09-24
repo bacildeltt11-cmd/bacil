@@ -1,4 +1,9 @@
 <?php
+if (defined('FUNCTIONS_LOADED')) {
+    return;
+}
+define('FUNCTIONS_LOADED', true);
+
 /**
  * Shared utility functions for Manifest Cargo System
  * Prevent code duplication and centralize common operations
