@@ -5,6 +5,97 @@
  */
 
 /**
+ * Serverless Cookie Session Handler
+ * Encrypts & signs session data inside an HttpOnly cookie to survive serverless function scaling & cold starts.
+ */
+if (!class_exists('ServerlessCookieSessionHandler')) {
+    class ServerlessCookieSessionHandler implements SessionHandlerInterface {
+        private $secretKey;
+        private $cookieName = 'MANIFEST_SESS';
+
+        public function __construct() {
+            $this->secretKey = getenv('MONGODB_URI') ?: 'cargo_manifest_secret_key_2026_ver';
+        }
+
+        public function open($savePath, $sessionName): bool {
+            return true;
+        }
+
+        public function close(): bool {
+            return true;
+        }
+
+        public function read($id): string|false {
+            if (!isset($_COOKIE[$this->cookieName])) {
+                return '';
+            }
+
+            $raw = $_COOKIE[$this->cookieName];
+            $parts = explode('.', $raw, 2);
+            if (count($parts) !== 2) {
+                return '';
+            }
+
+            list($payload, $signature) = $parts;
+            $expectedSignature = hash_hmac('sha256', $payload, $this->secretKey);
+
+            if (!hash_equals($expectedSignature, $signature)) {
+                return '';
+            }
+
+            $data = base64_decode($payload);
+            return $data !== false ? $data : '';
+        }
+
+        public function write($id, $data): bool {
+            if (headers_sent()) {
+                return false;
+            }
+
+            $payload = base64_encode($data);
+            $signature = hash_hmac('sha256', $payload, $this->secretKey);
+            $value = $payload . '.' . $signature;
+
+            $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+                       (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+            setcookie($this->cookieName, $value, [
+                'expires' => time() + 86400 * 7,
+                'path' => '/',
+                'domain' => '',
+                'secure' => $isHttps,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+
+            return true;
+        }
+
+        public function destroy($id): bool {
+            if (!headers_sent()) {
+                setcookie($this->cookieName, '', [
+                    'expires' => time() - 3600,
+                    'path' => '/',
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+            }
+            return true;
+        }
+
+        public function gc($maxlifetime): int|false {
+            return 0;
+        }
+    }
+}
+
+// Automatically configure session save handler if session hasn't started yet
+if (session_status() === PHP_SESSION_NONE) {
+    $handler = new ServerlessCookieSessionHandler();
+    session_set_save_handler($handler, true);
+}
+
+/**
  * Ensure only Boss user can access certain pages
  */
 function ensureBossAccess() {
@@ -40,7 +131,22 @@ function e($data, $flags = ENT_QUOTES, $encoding = 'UTF-8') {
  */
 function generate_csrf_token() {
     if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        if (!empty($_COOKIE['csrf_token'])) {
+            $_SESSION['csrf_token'] = $_COOKIE['csrf_token'];
+        } else {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+    }
+    if (!headers_sent() && (empty($_COOKIE['csrf_token']) || $_COOKIE['csrf_token'] !== $_SESSION['csrf_token'])) {
+        $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+                   (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        setcookie('csrf_token', $_SESSION['csrf_token'], [
+            'expires' => time() + 3600,
+            'path' => '/',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
     }
     return $_SESSION['csrf_token'];
 }
@@ -49,10 +155,14 @@ function generate_csrf_token() {
  * Verify CSRF token
  */
 function verify_csrf_token($token) {
-    if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
-        return false;
+    if (empty($token)) return false;
+    if (isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token)) {
+        return true;
     }
-    return true;
+    if (isset($_COOKIE['csrf_token']) && hash_equals($_COOKIE['csrf_token'], $token)) {
+        return true;
+    }
+    return false;
 }
 
 /**

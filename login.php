@@ -1,12 +1,13 @@
 <?php
-// Session security settings
-session_start([
-    'cookie_httponly' => true,
-    'use_strict_mode' => true
-]);
+include_once "functions.php";
+include_once "koneksi_mongodb.php";
 
-include "koneksi_mongodb.php";
-include "functions.php";
+if (session_status() === PHP_SESSION_NONE) {
+    session_start([
+        'cookie_httponly' => true,
+        'use_strict_mode' => true
+    ]);
+}
 
 // Generate CSRF token
 if (empty($_SESSION['csrf_token'])) {

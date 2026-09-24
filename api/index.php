@@ -6,6 +6,9 @@
 // Set working directory to project root directory
 chdir(dirname(__DIR__));
 
+// Initialize serverless functions & session handler
+require_once 'functions.php';
+
 // Parse URI path
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $uriPath = parse_url($requestUri, PHP_URL_PATH);
