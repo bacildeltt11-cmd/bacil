@@ -152,9 +152,9 @@ foreach ($jadwal_manifest as $m) {
         $url = ($_SESSION['login_rifqy'] !== 'Boss') ? 'input_muatan.php?id=' . $id : '';
         $muatan_count = count(findDocuments("muatan", ["id_manifest" => $id]));
         $status = $muatan_count > 0 ? 'Selesai' : 'Menunggu';
-        $color = $muatan_count > 0 ? 'green' : 'red';
-        $full_title = $title . ' (' . $status . ')';
-        $description = 'Kapal: ' . $m_arr['kapal'] . '\nTujuan: ' . $m_arr['tujuan'] . '\nTanggal: ' . $m_arr['tanggal'] . '\nJam: ' . $m_arr['jam'] . '\nNopol: ' . $m_arr['nopol'] . '\nStatus: ' . $status . '\nMuatan: ' . $muatan_count . ' item';
+        $color = $muatan_count > 0 ? '#10b981' : '#f59e0b';
+        $full_title = 'Manifest ' . ($m_arr['kapal'] ?? '') . ' - ' . ($m_arr['nopol'] ?? '');
+        $description = 'Kapal: ' . ($m_arr['kapal'] ?? '') . '\nTujuan: ' . ($m_arr['tujuan'] ?? '') . '\nTanggal: ' . $m_arr['tanggal'] . '\nJam: ' . $m_arr['jam'] . '\nNopol: ' . ($m_arr['nopol'] ?? '') . '\nStatus: ' . $status . '\nMuatan: ' . $muatan_count . ' item';
         $events[] = [
             'title' => $full_title,
             'start' => $start,
@@ -169,7 +169,9 @@ foreach ($jadwal_manifest as $m) {
                 'jenis' => $m_arr['jenis'] ?? '',
                 'nopol' => $m_arr['nopol'] ?? '',
                 'jam' => $m_arr['jam'] ?? '',
-                'tanggal' => $m_arr['tanggal'] ?? ''
+                'tanggal' => $m_arr['tanggal'] ?? '',
+                'status' => $status,
+                'muatan_count' => $muatan_count
             ],
             'url' => $url
         ];
@@ -188,61 +190,360 @@ foreach ($jadwal_manifest as $m) {
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <style>
+        /* ====================================================
+           PREMIUM FULLCALENDAR MODERN DESIGN SYSTEM
+           ==================================================== */
         #calendar {
-            background: var(--white);
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-top: 20px;
-            overflow: hidden;
+            background: transparent !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin-top: 10px !important;
+            width: 100% !important;
         }
-        .fc-header-toolbar {
-            margin-bottom: 20px;
+
+        /* Toolbar Layout */
+        .fc.fc-theme-standard .fc-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
         }
-        .fc-button {
-            background: var(--primary-blue) !important;
+
+        .fc .fc-toolbar-title {
+            font-size: 17px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            letter-spacing: -0.2px;
+        }
+
+        /* Segmented Button Groups */
+        .fc .fc-button-group {
+            display: inline-flex !important;
+            background: #f1f5f9 !important;
+            border-radius: 10px !important;
+            padding: 3px !important;
+            gap: 3px !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+
+        .fc .fc-button {
+            background: transparent !important;
             border: none !important;
+            color: #475569 !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            padding: 6px 14px !important;
             border-radius: 8px !important;
-            color: white !important;
-            font-weight: bold;
+            box-shadow: none !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            line-height: 1.4 !important;
+            min-height: 36px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
-        .fc-button:hover {
-            background: var(--dark-blue) !important;
+
+        .fc .fc-button:hover {
+            color: var(--primary-blue) !important;
+            background: rgba(10, 77, 191, 0.08) !important;
         }
-        .fc-event {
-            background: var(--primary-blue);
-            border: none;
+
+        /* Active Segment Tab */
+        .fc .fc-button.fc-button-active {
+            background: #ffffff !important;
+            color: var(--primary-blue) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Today Button */
+        .fc .fc-today-button {
+            background: #e0f2fe !important;
+            color: #0369a1 !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            padding: 6px 14px !important;
+            border: none !important;
+        }
+        .fc .fc-today-button:disabled {
+            opacity: 0.5 !important;
+        }
+
+        /* Table & Grid Styling */
+        .fc-theme-standard th, 
+        .fc-theme-standard td {
+            border-color: #f1f5f9 !important;
+        }
+
+        .fc .fc-col-header-cell {
+            background: #f8fafc !important;
+            padding: 8px 4px !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        .fc .fc-col-header-cell-cushion {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            color: #475569 !important;
+            text-decoration: none !important;
+        }
+
+        .fc-daygrid-day-number {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            color: #334155 !important;
+            padding: 4px 6px !important;
+            text-decoration: none !important;
+        }
+
+        .fc .fc-day-today {
+            background: rgba(10, 77, 191, 0.04) !important;
+        }
+
+        .fc .fc-day-today .fc-daygrid-day-number {
+            background: var(--primary-blue) !important;
+            color: #ffffff !important;
+            border-radius: 50% !important;
+            width: 22px !important;
+            height: 22px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 2px !important;
+        }
+
+        /* Grid Event Pill Styling */
+        .fc-daygrid-event {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 2px 1px !important;
+            box-shadow: none !important;
+        }
+
+        .fc-custom-grid-pill {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 6px;
             border-radius: 6px;
-            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            box-sizing: border-box;
+            transition: transform 0.15s ease;
+        }
+        .fc-custom-grid-pill.status-selesai {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .fc-custom-grid-pill.status-menunggu {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .fc-custom-grid-pill:active {
+            transform: scale(0.96);
+        }
+        .fc-grid-time {
+            font-size: 10px;
+            font-weight: 800;
+            opacity: 0.85;
+            flex-shrink: 0;
+        }
+        .fc-grid-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* List View (Agenda Cards) Styling */
+        .fc-theme-standard .fc-list {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            background: #f8fafc !important;
+        }
+
+        .fc-list-empty {
+            background: #ffffff !important;
+            padding: 30px 20px !important;
+            color: #64748b !important;
+            font-size: 14px !important;
+            text-align: center !important;
+            font-weight: 500 !important;
+        }
+
+        .fc-list-day-cushion {
+            background: #e2e8f0 !important;
+            padding: 10px 14px !important;
+        }
+
+        .fc-list-day-text {
+            font-weight: 800 !important;
+            color: #1e293b !important;
+            font-size: 13px !important;
+            text-decoration: none !important;
+        }
+
+        .fc-list-day-side-text {
+            font-weight: 600 !important;
+            color: #64748b !important;
+            font-size: 12px !important;
+        }
+
+        .fc-list-event {
+            background: #ffffff !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+        }
+
+        .fc-list-event:hover, .fc-list-event:active {
+            background: #f0f7ff !important;
+        }
+
+        .fc-list-event td {
+            border-color: #f1f5f9 !important;
+            padding: 8px 10px !important;
+            vertical-align: middle !important;
+        }
+
+        .fc-list-event-time {
+            display: none !important;
+        }
+
+        .fc-list-event-graphic {
+            display: none !important;
+        }
+
+        .fc-list-event-title {
+            padding: 6px 8px !important;
+        }
+
+        /* Custom Card for List View */
+        .fc-event-card-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f1f5f9;
+        }
+
+        .fc-event-card-mobile.status-selesai {
+            border-left: 4px solid #10b981;
+        }
+
+        .fc-event-card-mobile.status-menunggu {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .fc-event-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .fc-ship-name {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.2px;
+        }
+
+        .fc-status-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .fc-status-pill.status-selesai {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .fc-status-pill.status-menunggu {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .fc-event-details {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .fc-tag-badge {
+            background: #f1f5f9;
+            color: #475569;
             font-size: 12px;
-            padding: 4px 8px;
-            cursor: pointer;
-        }
-        .fc-event:hover {
-            background: var(--hover-blue);
-        }
-        .fc-daygrid-day:hover {
-            background: var(--light-blue);
-        }
-        .fc-col-header-cell {
-            background: var(--light-blue);
-            color: var(--text-color);
-            font-weight: bold;
-        }
-        .fc-day-today {
-            background: rgba(0,123,255,0.1) !important;
-        }
-        #tooltip {
-            position: absolute;
-            display: none;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 8px 12px;
+            font-weight: 600;
+            padding: 3px 8px;
             border-radius: 6px;
-            font-size: 12px;
-            white-space: pre-line;
-            z-index: 1000;
-            pointer-events: none;
+            border: 1px solid #e2e8f0;
+        }
+
+        .fc-tag-badge.count-tag {
+            background: #e0f2fe;
+            color: #0369a1;
+            border-color: #bae6fd;
+            font-weight: 700;
+        }
+
+        /* Mobile Adjustments for Calendar Toolbar */
+        @media (max-width: 640px) {
+            .fc.fc-theme-standard .fc-toolbar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+                margin-bottom: 12px !important;
+            }
+
+            .fc-toolbar-chunk:first-child {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                width: 100% !important;
+            }
+
+            .fc-toolbar-title {
+                font-size: 16px !important;
+                text-align: center !important;
+            }
+
+            /* View Segment Bar Full Width on Mobile */
+            .fc-toolbar-chunk:last-child {
+                width: 100% !important;
+            }
+
+            .fc-toolbar-chunk:last-child .fc-button-group {
+                width: 100% !important;
+                display: flex !important;
+            }
+
+            .fc-toolbar-chunk:last-child .fc-button {
+                flex: 1 !important;
+                text-align: center !important;
+                min-height: 42px !important;
+                font-size: 13px !important;
+                font-weight: 700 !important;
+            }
         }
     </style>
     <style>
@@ -822,13 +1123,31 @@ foreach ($jadwal_manifest as $m) {
             }
         };
 
-        // FullCalendar
+        // Helper: escape HTML for safe insertion
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // FullCalendar Modern Mobile & Desktop Setup
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
             if (calendarEl) {
-                var isMobile = window.innerWidth < 640;
+                var isMobile = window.innerWidth < 768;
                 var calendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: isMobile ? 'listMonth' : 'dayGridMonth',
+                    buttonText: {
+                        today: 'Hari Ini',
+                        month: '📅 Kalender',
+                        dayGridMonth: '📅 Kalender',
+                        list: '📋 Agenda',
+                        listMonth: '📋 Agenda'
+                    },
                     headerToolbar: isMobile ? {
                         left: 'prev,next',
                         center: 'title',
@@ -852,17 +1171,54 @@ foreach ($jadwal_manifest as $m) {
                         }
                     },
                     height: 'auto',
-                    dayMaxEvents: 3,
+                    dayMaxEvents: isMobile ? 2 : 4,
                     eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-                    navLinks: true,
-eventClick: function(info) {
+                    navLinks: false,
+                    eventContent: function(arg) {
+                        var ext = arg.event.extendedProps || {};
+                        var isList = arg.view.type.indexOf('list') !== -1;
+                        var statusClass = ext.status === 'Selesai' ? 'status-selesai' : 'status-menunggu';
+                        var statusBadge = ext.status === 'Selesai' ? '✅ Selesai' : '⏳ Menunggu';
+                        var kapal = ext.kapal || arg.event.title || 'Kapal';
+                        var jam = ext.jam || (arg.timeText ? arg.timeText : '');
+                        var nopol = ext.nopol || '';
+                        var tujuan = ext.tujuan || '';
+                        var muatanCount = parseInt(ext.muatan_count, 10) || 0;
+                        var muatanText = muatanCount > 0 ? ('📦 ' + muatanCount + ' muatan') : '📦 Belum ada muatan';
+
+                        if (isList) {
+                            var html = '<div class="fc-event-card-mobile ' + statusClass + '">' +
+                                '<div class="fc-event-top">' +
+                                    '<span class="fc-ship-name">🚢 ' + escapeHtml(kapal) + '</span>' +
+                                    '<span class="fc-status-pill ' + statusClass + '">' + statusBadge + '</span>' +
+                                '</div>' +
+                                '<div class="fc-event-details">' +
+                                    (jam ? '<span class="fc-tag-badge">⏰ ' + escapeHtml(jam) + '</span>' : '') +
+                                    (nopol ? '<span class="fc-tag-badge">🚛 ' + escapeHtml(nopol) + '</span>' : '') +
+                                    (tujuan ? '<span class="fc-tag-badge">📍 ' + escapeHtml(tujuan) + '</span>' : '') +
+                                    '<span class="fc-tag-badge count-tag">' + muatanText + '</span>' +
+                                '</div>' +
+                            '</div>';
+                            return { html: html };
+                        } else {
+                            var html = '<div class="fc-custom-grid-pill ' + statusClass + '" title="' + escapeHtml(arg.event.title) + '">' +
+                                (jam ? '<span class="fc-grid-time">' + escapeHtml(jam) + '</span>' : '') +
+                                '<span class="fc-grid-title">' + escapeHtml(kapal) + '</span>' +
+                            '</div>';
+                            return { html: html };
+                        }
+                    },
+                    eventClick: function(info) {
+                        if (info.jsEvent) {
+                            info.jsEvent.preventDefault();
+                        }
                         <?php if($is_boss): ?>
                             var eventId = info.event.id;
                             var ext = info.event.extendedProps || {};
                             document.getElementById('edit_event_id').value = eventId;
                             document.getElementById('edit_form_message').innerHTML = '';
 
-                            // Tampilkan modal dulu
+                            // Tampilkan modal
                             document.getElementById('edit_modal').style.display = 'flex';
 
                             // Set data langsung dari extendedProps
@@ -913,7 +1269,6 @@ eventClick: function(info) {
                                         return;
                                     }
                                 }
-                                // Tambah option baru
                                 var opt = document.createElement('option');
                                 opt.value = val;
                                 opt.textContent = val;
@@ -943,12 +1298,14 @@ eventClick: function(info) {
                                     console.log('API fetch error (using fallback):', err);
                                 });
                         <?php else: ?>
-                            if (info.event.url) { window.location.href = info.event.url; }
+                            if (info.event.url) { 
+                                window.location.href = info.event.url; 
+                            }
                         <?php endif; ?>
                     },
                     dateClick: function(info) {
                          <?php if($is_boss): ?>
-                             document.getElementById('add_event_form').reset();
+                              document.getElementById('add_event_form').reset();
                               document.getElementById('add_tanggal').value = info.dateStr;
                               var parts = info.dateStr.split('-');
                               var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
@@ -960,6 +1317,10 @@ eventClick: function(info) {
                     events: <?php echo json_encode($events ?: [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>
                 });
                 calendar.render();
+
+                window.addEventListener('resize', function() {
+                    calendar.updateSize();
+                });
             }
         });
 
