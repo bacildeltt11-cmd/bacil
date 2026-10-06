@@ -86,7 +86,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
     <?php include 'sidebar.php'; ?>
     <div class="main-content">
         <?php include 'top_nav.php'; ?>
-        <div style="padding: 40px;">
+        <div class="content-wrapper">
 
 <div class="kertas">
     <div class="header">
@@ -105,6 +105,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
             </div>
         </div>
 
+<div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
 <div class="table-wrapper">
     <table>
     <thead>

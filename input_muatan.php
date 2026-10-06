@@ -314,116 +314,148 @@ $h = $h_obj ? (array)$h_obj : [];
         ============================ */
         @media (max-width: 768px) {
             /* Reduce page padding */
-            div[style*="padding: 40px"] {
-                padding: 12px !important;
+            div[style*="padding: 40px"], .content-wrapper {
+                padding: 12px 10px !important;
             }
 
             /* Header info: stack info + button vertically */
+            .header-info {
+                padding: 14px 12px !important;
+                border-radius: 12px !important;
+                margin-bottom: 14px !important;
+            }
             .header-info-inner {
-                flex-direction: column;
-                align-items: flex-start;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
             }
             .header-info-inner > div {
-                width: 100%;
+                width: 100% !important;
             }
             .header-info-inner > div a {
-                display: block;
-                width: 100%;
-                text-align: center;
-                margin-top: 8px;
+                display: block !important;
+                width: 100% !important;
+                text-align: center !important;
+                min-height: 42px !important;
+                line-height: 42px !important;
+                padding: 0 !important;
+                border-radius: 8px !important;
             }
             .header-row {
-                grid-template-columns: 110px 10px auto;
-                font-size: 13px;
+                grid-template-columns: 95px 6px 1fr !important;
+                font-size: 13px !important;
+                gap: 4px !important;
             }
 
             /* Master box: stack vertically */
             .master-box {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-                padding: 15px;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+                padding: 14px 12px !important;
+                border-radius: 12px !important;
+                margin-bottom: 14px !important;
             }
             .master-box input {
-                width: 100%;
-                box-sizing: border-box;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 48px !important;
+                font-size: 16px !important;
+                box-sizing: border-box !important;
             }
             .master-box button {
-                width: 100%;
+                width: 100% !important;
+                min-height: 46px !important;
+                font-size: 14px !important;
+                font-weight: 700 !important;
             }
 
-            /* Row input: Nama barang full width, 4 items on next row */
+            /* Row input: Mobile friendly 2-column + full-width layout */
             .form-scroll-wrapper {
-                width: 100%;
-                margin-bottom: 15px;
+                width: 100% !important;
+                margin-bottom: 14px !important;
             }
             .row-input {
-                min-width: 0;
-                grid-template-columns: 1fr 1fr 1fr auto !important; /* Override style.css */
-                gap: 8px !important;
-                padding: 12px !important;
-                align-items: end;
+                min-width: 0 !important;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px !important;
+                padding: 14px 12px !important;
+                border-radius: 12px !important;
+                align-items: end !important;
             }
-            /* Nama Barang spans all columns */
-            .row-input .field:first-child {
+            /* Nama Barang spans full width */
+            .row-input .field:nth-child(1) {
                 grid-column: 1 / -1 !important;
             }
+            /* Volume spans full width */
+            .row-input .field:nth-child(4) {
+                grid-column: 1 / -1 !important;
+            }
+            /* Action button spans full width */
+            .row-input > div:last-child {
+                grid-column: 1 / -1 !important;
+                width: 100% !important;
+            }
             .row-input .field label {
-                font-size: 11px !important;
-                margin-bottom: 3px !important;
-                white-space: nowrap !important;
+                font-size: 13px !important;
+                margin-bottom: 4px !important;
+                font-weight: 600 !important;
             }
             .row-input .field .form-control,
             .row-input .field #search-box {
-                padding: 6px !important;
-                font-size: 12px !important;
+                padding: 11px 12px !important;
+                font-size: 16px !important;
+                min-height: 48px !important;
                 min-width: 0 !important;
                 width: 100% !important;
+                border-radius: 10px !important;
             }
-            .row-input > div[style*="display: flex"] {
-                flex-direction: row !important;
-                gap: 4px !important;
+            .row-input > div:last-child .btn {
+                width: 100% !important;
+                min-height: 48px !important;
+                font-size: 15px !important;
+                border-radius: 10px !important;
             }
-            .row-input > div[style*="display: flex"] .btn {
-                white-space: nowrap !important;
-                padding: 6px 10px !important;
-                font-size: 12px !important;
-                height: 100% !important;
+            .row-input > div:last-child a.btn {
+                margin-top: 6px !important;
             }
 
-            /* Table: full width card with scroll */
+            /* Table wrapper with smooth scroll */
             .table-wrapper {
-                margin-bottom: 12px;
+                margin-bottom: 14px !important;
                 overflow-x: auto !important;
                 width: 100% !important;
-                -webkit-overflow-scrolling: touch;
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 10px !important;
             }
             .table-custom {
-                display: table !important; /* Override display: block from style.css */
+                display: table !important;
                 width: 100% !important;
-                min-width: 550px !important; 
+                min-width: 540px !important; 
                 font-size: 12px !important;
             }
             .table-custom th, .table-custom td {
-                padding: 8px 6px !important;
+                padding: 10px 8px !important;
                 white-space: nowrap !important;
             }
 
             /* Nav actions: stack vertically */
             .nav-actions {
-                flex-direction: column;
-                gap: 10px;
+                flex-direction: column-reverse !important;
+                gap: 10px !important;
+                margin-top: 20px !important;
             }
             .nav-actions a {
-                width: 100%;
-                text-align: center;
-                display: block;
+                width: 100% !important;
+                text-align: center !important;
+                display: block !important;
             }
 
             /* Lock notice */
             .lock-notice {
-                font-size: 13px;
-                padding: 10px 12px;
+                font-size: 13px !important;
+                padding: 11px 14px !important;
             }
         }
     </style>
@@ -434,7 +466,7 @@ $h = $h_obj ? (array)$h_obj : [];
 <div class="main-content">
          <?php include 'top_nav.php'; ?>
          <?php if(isset($_SESSION['success'])){ echo '<div class="alert alert-success" style="padding:12px 20px; background:#d4edda; color:#155724; border-radius:8px; margin-bottom:20px; border:1px solid #c3e6cb;">'.$_SESSION['success'].'</div>'; unset($_SESSION['success']); } if(isset($_SESSION['error'])){ echo '<div class="alert alert-danger" style="padding:12px 20px; background:#f8d7da; color:#721c24; border-radius:8px; margin-bottom:20px; border:1px solid #f5c6cb;">'.$_SESSION['error'].'</div>'; unset($_SESSION['error']); } ?>
-        <div style="padding: 40px;">
+        <div class="content-wrapper">
             <div class="container">
 
                 <div class="header-info">
@@ -496,6 +528,7 @@ $h = $h_obj ? (array)$h_obj : [];
                 </form>
                 </div>
 
+                <div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
                 <div class="table-wrapper">
                 <table class="table-custom">
                     <thead><tr><th>NO</th><th>NAMA BARANG</th><th>PCS</th><th>TON</th><th>VOLUME</th><th>AKSI</th></tr></thead>
@@ -510,7 +543,9 @@ $h = $h_obj ? (array)$h_obj : [];
                             $vol_tampil = isset($m['volume']) ? $m['volume'] : '';
                             $edit_link = $is_locked ? '#' : "?edit=" . e($id_muatan);
                             $hapus_link = $is_locked ? '#' : "?hapus=" . e($id_muatan) . "&token=" . e($_SESSION['csrf_token']);
-                            echo "<tr><td>$no</td><td style='text-align:left; padding-left:15px;'>" . e($m['nama_barang']) . "</td><td>" . e($m['pcs']) . "</td><td>" . e($m['ton']) . "</td><td>$vol_tampil</td><td><a href='$edit_link' style='color:" . ($is_locked ? '#999' : 'orange') . "; text-decoration:none; font-weight:bold; margin-right: 10px; " . ($is_locked ? 'cursor:not-allowed;' : '') . "'>Edit</a> <a href='$hapus_link' style='color:" . ($is_locked ? '#999' : 'red') . "; text-decoration:none; font-weight:bold; " . ($is_locked ? 'cursor:not-allowed;' : '') . "'" . ($is_locked ? "" : " onclick='return confirm(\"Hapus item ini?\")'" ) . ">Hapus</a></td></tr>";
+                            $edit_btn = "<a href='$edit_link' class='btn-pill btn-pill-edit'" . ($is_locked ? " style='opacity:0.5;pointer-events:none;'" : "") . ">✏️ Edit</a>";
+                            $hapus_btn = "<a href='$hapus_link' class='btn-pill btn-pill-del'" . ($is_locked ? " style='opacity:0.5;pointer-events:none;'" : " onclick='return confirm(\"Hapus item ini?\")'") . ">🗑️ Hapus</a>";
+                            echo "<tr><td>$no</td><td style='text-align:left; padding-left:15px; font-weight:600;'>" . e($m['nama_barang']) . "</td><td>" . e($m['pcs']) . "</td><td><strong>" . e($m['ton']) . "</strong></td><td>$vol_tampil</td><td><div class='action-btn-group'>$edit_btn $hapus_btn</div></td></tr>";
                             $no++;
                         }
                         ?>

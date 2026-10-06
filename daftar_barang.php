@@ -124,7 +124,7 @@ if (empty($barang_list)) {
 <?php include 'sidebar.php'; ?>
 <div class="main-content">
 <?php include 'top_nav.php'; ?>
-<div style="padding: 40px;">
+<div class="content-wrapper">
     <h3 class="header-title">📦 Daftar Barang Master</h3>
     <?php
     if (isset($_SESSION['error'])) {
@@ -137,48 +137,51 @@ if (empty($barang_list)) {
     }
     ?>
     <?php if ($is_admin): ?>
-    <div class="add-barang-box" style="background:#fff8e1; border-left:5px solid #ff9800; padding:18px 22px; border-radius:12px; margin-bottom:25px;">
-        <strong style="color:#e65100;">Tambah Barang Baru</strong>
-        <form method="POST" class="add-barang-form" style="margin-top:10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+    <div class="add-barang-box" style="background:#fff8e1; border-left:5px solid #ff9800; padding:18px 20px; border-radius:12px; margin-bottom:20px;">
+        <strong style="color:#e65100; font-size: 15px;">➕ Tambah Barang Baru</strong>
+        <form method="POST" class="add-barang-form" style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <input type="hidden" name="csrf_token" value="<?php echo e($_SESSION['csrf_token']); ?>">
-            <input type="text" name="nama_barang" class="form-control" placeholder="Contoh: Durian, Jeruk, dll" required autocomplete="off">
-            <input type="number" name="pcs" class="form-control" placeholder="PCS (angka)" min="0" required>
-            <button type="submit" name="add_barang" class="btn btn-primary">+ Tambahkan ke Daftar</button>
+            <input type="text" name="nama_barang" class="form-control" placeholder="Contoh: Durian, Jeruk, dll" required autocomplete="off" style="flex:2; min-width:180px;">
+            <input type="number" name="pcs" class="form-control" placeholder="PCS (angka)" min="0" required style="flex:1; min-width:110px;">
+            <button type="submit" name="add_barang" class="btn btn-primary" style="min-width:140px;">+ Tambah ke Daftar</button>
         </form>
-        <small style="color:#856404; display:block; margin-top:8px;">Admin dapat menambahkan nama barang baru yang akan tersedia untuk dipilih saat input muatan.</small>
+        <small style="color:#856404; display:block; margin-top:8px; font-size:12px;">Admin dapat menambahkan nama barang baru yang akan tersedia untuk dipilih saat input muatan.</small>
     </div>
     <?php else: ?>
-    <div style="background:#f0f4f8; padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:14px; color:#555;">
+    <div style="background:#f0f4f8; padding:14px 18px; border-radius:10px; margin-bottom:20px; font-size:13px; color:#555;">
         <strong>Mode Monitoring (Boss)</strong> — Daftar ini hanya untuk dilihat. Penambahan barang baru hanya dapat dilakukan oleh Admin.
     </div>
     <?php endif; ?>
     <div class="container-barang">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:15px;">
-            <h4 style="margin:0; color:#0a4dbf;">Daftar Barang yang Tersedia (<?php echo count($barang_list); ?>)</h4>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h4 style="margin:0; color:#0a4dbf; font-size: 16px;">Daftar Barang yang Tersedia (<?php echo count($barang_list); ?>)</h4>
             <div style="position:relative; max-width:320px; width:100%;">
                 <input type="text" id="search-barang" class="form-control" placeholder="Cari nama barang..." style="padding-left:35px; width:100%; box-sizing:border-box; border-radius:20px;">
                 <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#888; font-size:14px;">🔍</span>
             </div>
         </div>
         <?php if (!empty($barang_list)): ?>
+        <div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
         <div class="table-wrapper">
         <table id="barang-table" class="barang-table" style="width:100%; border-collapse:collapse;">
             <thead>
                 <tr style="background:#f0f4f8;">
-                    <th style="padding:10px; text-align:left;">Nama Barang</th>
-                    <th style="padding:10px; text-align:left;">PCS</th>
-                    <?php if ($is_admin): ?><th style="padding:10px; text-align:center;">Aksi</th><?php endif; ?>
+                    <th style="padding:12px 14px; text-align:left;">Nama Barang</th>
+                    <th style="padding:12px 14px; text-align:left;">PCS</th>
+                    <?php if ($is_admin): ?><th style="padding:12px 14px; text-align:center;">Aksi</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($barang_list as $item): ?>
                 <tr data-name="<?php echo htmlspecialchars(strtolower($item['nama'])); ?>">
-                    <td style="padding:10px; border-bottom:1px solid #eee;"><?php echo e($item['nama']); ?></td>
-                    <td style="padding:10px; border-bottom:1px solid #eee;"><?php echo e($item['pcs']); ?></td>
+                    <td style="padding:12px 14px; border-bottom:1px solid #eee; font-weight:600;"><?php echo e($item['nama']); ?></td>
+                    <td style="padding:12px 14px; border-bottom:1px solid #eee;"><span style="background:#f1f5f9; padding:4px 10px; border-radius:6px; font-weight:700;"><?php echo e($item['pcs']); ?></span></td>
                     <?php if ($is_admin): ?>
-                    <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">
-                        <a href="javascript:void(0);" class="edit" data-nama="<?php echo e($item['nama']); ?>" data-pcs="<?php echo e($item['pcs']); ?>" style="margin-right:12px; color:#1565c0; font-weight:700; text-decoration:none; font-size:16px;" title="Edit PCS">✎</a>
-                        <a href="?hapus=<?php echo urlencode($item['nama']); ?>" class="del" style="color:#e53935; font-weight:700; font-size:18px; text-decoration:none;" onclick="return confirm('Hapus \"<?php echo e($item['nama']); ?>\" dari daftar?')">×</a>
+                    <td style="padding:10px 14px; border-bottom:1px solid #eee; text-align:center;">
+                        <div class="action-btn-group">
+                            <a href="javascript:void(0);" class="btn-pill btn-pill-edit edit" data-nama="<?php echo e($item['nama']); ?>" data-pcs="<?php echo e($item['pcs']); ?>" title="Edit PCS">✏️ Edit</a>
+                            <a href="?hapus=<?php echo urlencode($item['nama']); ?>" class="btn-pill btn-pill-del del" title="Hapus Barang" onclick="return confirm('Hapus \'<?php echo e($item['nama']); ?>\' dari daftar?')">🗑️ Hapus</a>
+                        </div>
                     </td>
                     <?php endif; ?>
                 </tr>
@@ -187,23 +190,34 @@ if (empty($barang_list)) {
         </table>
         </div>
         <?php else: ?>
-        <p style="color:#888;">Belum ada daftar barang.</p>
+        <p style="color:#888; padding:20px; text-align:center;">Belum ada daftar barang.</p>
         <?php endif; ?>
     </div>
     <?php if ($is_admin): ?>
-    <div id="edit_modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
-    <div id="edit_form" style="background:#e3f2fd; border-left:5px solid #2196f3; padding:18px; border-radius:12px; max-width:400px; width:90%; position:relative;">
-        <button type="button" id="edit_close" style="position:absolute; top:8px; right:8px; background:none; border:none; font-size:20px; cursor:pointer;" aria-label="Close">&times;</button>
-        <strong style="color:#0d47a1;">Edit Barang</strong>
-        <form method="POST" style="margin-top:10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-            <input type="hidden" name="csrf_token" value="<?php echo e($_SESSION['csrf_token']); ?>">
-            <input type="text" name="nama_barang" class="form-control" placeholder="Nama Barang" value="" required style="max-width:320px; width:100%;" autocomplete="off" readonly>
-            <input type="number" name="pcs" class="form-control" placeholder="PCS (angka)" min="0" required style="max-width:120px; width:100%;" value="">
-            <button type="submit" name="update_barang" class="btn btn-primary" style="padding:10px 22px;">Update</button>
-        </form>
+    <div id="edit_modal" class="modal-overlay" style="display:none;" onclick="if (event.target === this) this.style.display='none'">
+        <div class="modal" onclick="event.stopImmediatePropagation()">
+            <div class="modal-header">
+                <h4>✏️ Edit Stok Barang</h4>
+            </div>
+            <div class="modal-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo e($_SESSION['csrf_token']); ?>">
+                    <div class="form-group">
+                        <label>Nama Barang</label>
+                        <input type="text" name="nama_barang" class="form-control" placeholder="Nama Barang" value="" required readonly style="background:#f1f5f9;">
+                    </div>
+                    <div class="form-group">
+                        <label>Jumlah PCS</label>
+                        <input type="number" name="pcs" class="form-control" placeholder="PCS (angka)" min="0" required value="">
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button type="submit" name="update_barang" class="btn btn-primary" style="flex:1;">Simpan Perubahan</button>
+                        <button type="button" id="edit_close" class="btn btn-secondary">Batal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-</div>
-
     <?php endif; ?>
 </div>
 </div>

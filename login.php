@@ -61,28 +61,37 @@ if(isset($_POST['login'])){
     <link rel="stylesheet" href="style.css">
     <style>
         body {
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             justify-content: center;
             align-items: center;
             background: linear-gradient(135deg, var(--light-blue), #cce0ff);
+            padding: 20px 16px;
+            margin: 0;
+            box-sizing: border-box;
         }
         .login-container {
             background: var(--white);
-            padding: 40px;
+            padding: 36px 28px;
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
             width: 100%;
             max-width: 400px;
             text-align: center;
             border-top: 5px solid var(--primary-blue);
+            box-sizing: border-box;
         }
-        .logo-area { margin-bottom: 30px; }
-        .logo-area h1 { color: var(--primary-blue); font-size: 28px; letter-spacing: 2px; }
-        .logo-area p { color: var(--gray); font-size: 14px; margin-top: 5px; }
-        .btn-login { width: 100%; padding: 14px; font-size: 16px; margin-top: 10px; }
+        .logo-area { margin-bottom: 26px; }
+        .logo-area h1 { color: var(--primary-blue); font-size: 26px; letter-spacing: 1.5px; font-weight: 800; margin: 0; }
+        .logo-area p { color: var(--gray); font-size: 13px; margin-top: 6px; }
+        .btn-login { width: 100%; min-height: 48px; font-size: 16px; margin-top: 10px; border-radius: 10px; font-weight: 700; }
         .footer-text { margin-top: 25px; font-size: 12px; color: #888; }
-        .alert { background: #ffeded; color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border: 1px solid var(--danger); }
+        .alert { background: #ffeded; color: var(--danger); padding: 12px 14px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; border: 1px solid var(--danger); }
+        @media (max-width: 480px) {
+            .login-container { padding: 28px 20px; border-radius: 16px; }
+            .logo-area h1 { font-size: 22px; }
+        }
     </style>
 </head>
 <body>

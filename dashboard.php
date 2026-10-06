@@ -669,8 +669,10 @@ foreach ($jadwal_manifest as $m) {
                      <input type="time" name="jam" class="form-control" required>
                  </div>
 
-                 <button type="submit" class="btn btn-primary">Simpan</button>
-                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('add_modal').style.display='none'">Batal</button>
+                 <div style="display: flex; gap: 10px; margin-top: 18px;">
+                     <button type="submit" class="btn btn-primary" style="flex: 1;">Simpan</button>
+                     <button type="button" class="btn btn-secondary" onclick="document.getElementById('add_modal').style.display='none'">Batal</button>
+                 </div>
                  <div id="add_form_message" style="margin-top: 10px; font-size: 13px;"></div>
              </form>
          </div>
@@ -728,9 +730,11 @@ foreach ($jadwal_manifest as $m) {
                      <input type="time" name="jam" id="edit_jam" class="form-control" required>
                  </div>
 
-                 <button type="submit" class="btn btn-primary">Update</button>
-                 <button type="button" class="btn btn-danger" onclick="deleteEvent()">Hapus</button>
-                 <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Batal</button>
+                 <div style="display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap;">
+                     <button type="submit" class="btn btn-primary" style="flex: 1; min-width: 90px;">Update</button>
+                     <button type="button" class="btn btn-danger" onclick="deleteEvent()" style="flex: 1; min-width: 90px;">Hapus</button>
+                     <button type="button" class="btn btn-secondary" onclick="closeEditModal()" style="min-width: 80px;">Batal</button>
+                 </div>
                  <div id="edit_form_message" style="margin-top: 10px; font-size: 13px;"></div>
              </form>
          </div>
@@ -822,9 +826,14 @@ foreach ($jadwal_manifest as $m) {
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
             if (calendarEl) {
+                var isMobile = window.innerWidth < 640;
                 var calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    headerToolbar: {
+                    initialView: isMobile ? 'listMonth' : 'dayGridMonth',
+                    headerToolbar: isMobile ? {
+                        left: 'prev,next',
+                        center: 'title',
+                        right: 'dayGridMonth,listMonth'
+                    } : {
                         left: 'prev,next today',
                         center: 'title',
                         right: 'dayGridMonth,listMonth'

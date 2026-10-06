@@ -490,8 +490,91 @@ body {
 .lock-notice .lock-emoji { font-size: 22px; }
 
 /* ==========================================================================
-   RESPONSIVE DESIGN SYSTEM - MOBILE & TABLET OPTIMIZATIONS
+   RESPONSIVE DESIGN SYSTEM - MOBILE & TOUCH OPTIMIZATIONS
    ========================================================================== */
+
+/* Touch Ergonomics & Base Utilities */
+button, 
+input, 
+select, 
+textarea, 
+a, 
+.btn, 
+.nav-link, 
+.bottom-nav-item {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* TABLE HORIZONTAL SCROLL HINT */
+.table-scroll-hint {
+    display: none;
+}
+
+/* PILL ACTION BUTTONS IN TABLES */
+.action-btn-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.btn-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+    min-height: 32px;
+    line-height: 1;
+}
+
+.btn-pill-edit {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+.btn-pill-edit:hover, .btn-pill-edit:active {
+    background: #bae6fd;
+    color: #0284c7;
+    transform: scale(0.96);
+}
+
+.btn-pill-del {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+.btn-pill-del:hover, .btn-pill-del:active {
+    background: #fecaca;
+    color: #dc2626;
+    transform: scale(0.96);
+}
+
+.btn-pill-view {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+}
+.btn-pill-view:hover, .btn-pill-view:active {
+    background: #c7d2fe;
+    color: #4338ca;
+    transform: scale(0.96);
+}
+
+/* MOBILE BOTTOM NAVIGATION BAR (Hidden on desktop) */
+.mobile-bottom-nav {
+    display: none;
+}
 
 /* 1. TABLET & LAPTOP SCREENS (Up to 1024px) */
 @media (max-width: 1024px) {
@@ -501,18 +584,18 @@ body {
         width: 100% !important;
     }
 
-    /* Off-Canvas Slide-in Sidebar */
+    /* Off-Canvas Slide-in Sidebar Drawer */
     .sidebar {
         position: fixed !important;
         top: 0 !important;
         bottom: 0 !important;
         left: 0 !important;
-        width: 270px !important;
+        width: 280px !important;
         max-width: 85vw !important;
         height: 100% !important;
         height: 100dvh !important;
         z-index: 1500 !important;
-        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.35) !important;
+        box-shadow: 12px 0 40px rgba(0, 0, 0, 0.4) !important;
         transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
         transform: translateX(0) !important;
     }
@@ -532,8 +615,8 @@ body {
         position: fixed;
         inset: 0;
         background: rgba(15, 23, 42, 0.65);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
         z-index: 1400;
         opacity: 0;
         transition: opacity 0.25s ease;
@@ -565,9 +648,91 @@ body {
     }
 }
 
-/* 2. MID-SIZED MOBILE & PHABLETS (Up to 768px) */
+/* 2. MID-SIZED MOBILE & SMARTPHONES (Up to 768px) */
 @media (max-width: 768px) {
-    /* Global Container Padding Reset (Overrides desktop padding: 40px) */
+    /* Mobile Bottom Navigation Bar */
+    .mobile-bottom-nav {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 60px !important;
+        background: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border-top: 1px solid rgba(226, 232, 240, 0.95) !important;
+        z-index: 1200 !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07) !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        align-items: center !important;
+        justify-content: space-around !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: #64748b;
+        padding: 6px 2px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 10px;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+        min-height: 48px;
+    }
+
+    .bottom-nav-item:active {
+        transform: scale(0.92);
+        background: rgba(10, 77, 191, 0.08);
+    }
+
+    .bottom-nav-item.active {
+        color: var(--primary-blue) !important;
+    }
+
+    .bottom-nav-icon {
+        font-size: 20px;
+        line-height: 1.1;
+        display: block;
+        transition: transform 0.2s ease;
+    }
+
+    .bottom-nav-item.active .bottom-nav-icon {
+        transform: translateY(-2px);
+    }
+
+    .bottom-nav-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        margin-top: 2px;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .bottom-nav-item.active .bottom-nav-label {
+        color: var(--primary-blue);
+        font-weight: 800;
+    }
+
+    /* Content Area Safe Bottom Padding (Prevents overlap with bottom navigation) */
+    body {
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    }
+
+    .main-content {
+        padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    /* Global Container Padding Reset */
     div[style*="padding: 40px"],
     div[style*="padding:40px"],
     .main-content > div[style*="padding"],
@@ -575,11 +740,11 @@ body {
         padding: 14px 12px !important;
     }
 
-    /* Cards & Containers */
+    /* Containers, Cards & Wrappers */
     .container,
     .container-barang {
-        padding: 18px 14px !important;
-        margin: 8px 0 16px 0 !important;
+        padding: 16px 14px !important;
+        margin: 6px 0 16px 0 !important;
         border-radius: 14px !important;
         max-width: 100% !important;
         box-shadow: 0 2px 12px rgba(10, 77, 191, 0.05) !important;
@@ -606,14 +771,15 @@ body {
 
     .main-content p.subtitle {
         font-size: 13px !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 14px !important;
     }
 
-    /* Inputs, Selects & Forms (No iOS auto-zoom, big comfortable touch areas) */
+    /* Inputs, Selects & Forms (Prevents iOS zoom, large comfortable touch areas) */
     .form-control,
     input[type="text"],
     input[type="number"],
     input[type="date"],
+    input[type="time"],
     input[type="password"],
     select,
     textarea {
@@ -621,6 +787,8 @@ body {
         min-height: 48px !important;
         padding: 11px 14px !important;
         border-radius: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     .form-group {
@@ -631,6 +799,7 @@ body {
         font-size: 13px !important;
         margin-bottom: 6px !important;
         font-weight: 600 !important;
+        color: #374151 !important;
     }
 
     /* Select Group with + button */
@@ -680,17 +849,52 @@ body {
         width: 100% !important;
     }
 
-    /* Data Tables Horizontal Touch Scrolling */
-    .table-custom,
-    .barang-table,
-    .table-wrapper,
-    .kertas table {
+    /* Table Horizontal Touch Scrolling & Hint */
+    .table-scroll-hint {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        background: #eff6ff !important;
+        border: 1px dashed #bfdbfe !important;
+        color: #1d4ed8 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        padding: 7px 12px !important;
+        border-radius: 8px !important;
+        margin-bottom: 10px !important;
+        user-select: none !important;
+    }
+
+    .table-scroll-hint .hint-icon {
+        font-size: 13px !important;
+        animation: hintSlide 1.5s infinite ease-in-out !important;
+    }
+
+    @keyframes hintSlide {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(3px); }
+    }
+
+    .table-wrapper {
         display: block !important;
         width: 100% !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
         border-radius: 10px !important;
-        background: #ffffff;
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        margin-bottom: 14px !important;
+    }
+
+    .table-custom,
+    .barang-table,
+    .table-wrapper table,
+    .kertas table {
+        display: table !important;
+        width: 100% !important;
+        min-width: 540px !important;
+        border-collapse: collapse !important;
     }
 
     .table-custom th,
@@ -732,12 +936,14 @@ body {
     #calendar {
         height: auto !important;
         min-height: 320px !important;
+        padding: 12px !important;
     }
 
     .fc-header-toolbar {
         flex-direction: column !important;
         gap: 8px !important;
         align-items: stretch !important;
+        margin-bottom: 12px !important;
     }
 
     .fc-toolbar-chunk {
@@ -751,7 +957,7 @@ body {
         padding: 6px 10px !important;
         font-size: 12px !important;
         min-height: 36px !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
     }
 
     .fc-toolbar-title {
@@ -784,10 +990,42 @@ body {
     .history-item a {
         align-self: flex-end !important;
         font-size: 12px !important;
-        padding: 4px 10px !important;
+        padding: 6px 12px !important;
         background: #ffffff !important;
         border: 1px solid rgba(10, 77, 191, 0.25) !important;
         border-radius: 6px !important;
+        display: inline-block !important;
+    }
+
+    /* Input Keberangkatan Page */
+    .container {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .form-container, .header-right {
+        width: 100% !important;
+    }
+
+    .header-right {
+        padding: 20px 16px !important;
+        border-radius: 14px !important;
+    }
+
+    .header-right h3 {
+        font-size: 16px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .header-right p {
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+    }
+
+    .header-right .info-box {
+        margin-top: 14px !important;
+        padding: 12px !important;
+        font-size: 12px !important;
     }
 
     /* Data.php Filter Form */
@@ -821,6 +1059,7 @@ body {
         gap: 12px !important;
         padding: 14px !important;
         border-radius: 12px !important;
+        margin-bottom: 16px !important;
     }
 
     .header-info-inner {
@@ -836,19 +1075,13 @@ body {
         display: block !important;
         width: 100% !important;
         text-align: center !important;
-        margin-top: 8px !important;
+        margin-top: 10px !important;
     }
 
     .header-row {
-        grid-template-columns: 100px 10px auto !important;
+        grid-template-columns: 95px 8px 1fr !important;
         font-size: 13px !important;
-    }
-
-    .row-input {
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-        padding: 16px 14px !important;
-        border-radius: 12px !important;
+        gap: 4px !important;
     }
 
     .master-box {
@@ -857,40 +1090,89 @@ body {
         gap: 10px !important;
         padding: 14px !important;
         border-radius: 12px !important;
+        margin-bottom: 16px !important;
     }
 
-    .master-box input,
+    .master-box input {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 48px !important;
+        font-size: 16px !important;
+    }
+
     .master-box button {
         width: 100% !important;
+        min-height: 46px !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    /* Row input for Muatan */
+    .form-scroll-wrapper {
+        width: 100% !important;
+        margin-bottom: 16px !important;
+    }
+
+    .row-input {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        padding: 14px !important;
+        border-radius: 12px !important;
+        align-items: end !important;
+    }
+
+    .row-input .field:first-child {
+        grid-column: 1 / -1 !important;
+    }
+
+    .row-input .field:nth-child(4) {
+        grid-column: 1 / -1 !important;
+    }
+
+    .row-input > div:last-child {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+    }
+
+    .row-input > div:last-child .btn {
+        width: 100% !important;
+        min-height: 48px !important;
     }
 
     .nav-actions {
         flex-direction: column-reverse !important;
         gap: 10px !important;
         align-items: stretch !important;
+        margin-top: 20px !important;
     }
 
-    .nav-actions .btn {
+    .nav-actions .btn,
+    .nav-actions a {
         width: 100% !important;
+        text-align: center !important;
     }
 
-    /* Daftar Barang Master */
-    .container-barang form {
+    /* Master Barang Container */
+    .container-barang form,
+    .add-barang-form {
         flex-direction: column !important;
         align-items: stretch !important;
         gap: 10px !important;
     }
 
     .container-barang form input,
-    .container-barang form button {
+    .container-barang form button,
+    .add-barang-form input,
+    .add-barang-form button {
         max-width: 100% !important;
         width: 100% !important;
     }
 
-    /* Modal Responsive */
+    /* Modal Responsive Dialog */
     .modal {
         width: 94% !important;
-        max-width: 420px !important;
+        max-width: 440px !important;
         border-radius: 18px !important;
         padding: 20px 16px !important;
         max-height: 90vh !important;
@@ -908,26 +1190,36 @@ body {
         padding: 0 16px 18px !important;
     }
 
-    /* Paper Preview */
+    /* Paper Preview (preview_manifest.php & preview_manifest_lama.php) */
     .kertas {
-        padding: 14px 10px !important;
-        margin: 5px 0 !important;
-        border-radius: 10px !important;
+        padding: 16px 12px !important;
+        margin: 5px 0 20px 0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06) !important;
     }
 
     .header-box {
-        padding: 16px !important;
+        padding: 18px 12px !important;
         border-radius: 10px !important;
         margin-bottom: 16px !important;
     }
 
-    .header-box h1 { font-size: 18px !important; }
-    .header-box h2 { font-size: 12px !important; letter-spacing: 1px !important; }
+    .header-box h1 { font-size: 19px !important; letter-spacing: 1.5px !important; }
+    .header-box h2 { font-size: 11px !important; letter-spacing: 2px !important; }
+
+    .info {
+        padding: 14px 12px !important;
+        margin-bottom: 16px !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+    }
 
     /* Actions & Print Buttons */
     .actions {
         flex-direction: column !important;
         gap: 10px !important;
+        padding-bottom: 20px !important;
+        width: 100% !important;
     }
 
     .actions .btn,
@@ -936,7 +1228,9 @@ body {
     .btn-next {
         width: 100% !important;
         text-align: center !important;
+        justify-content: center !important;
         min-height: 48px !important;
+        font-size: 15px !important;
     }
 
     .action-buttons-group {
@@ -952,19 +1246,6 @@ body {
         text-align: center !important;
     }
 
-    /* Add barang form stacked */
-    .add-barang-form {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 10px !important;
-    }
-
-    .add-barang-form input,
-    .add-barang-form button {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-
     /* Login Box */
     .login-container {
         margin: 16px !important;
@@ -977,11 +1258,11 @@ body {
 @media (max-width: 480px) {
     .top-nav {
         height: 56px !important;
-        padding: 0 10px !important;
+        padding: 0 12px !important;
     }
 
     .nav-brand {
-        font-size: 13px !important;
+        font-size: 14px !important;
     }
 
     .nav-sub {
@@ -989,21 +1270,21 @@ body {
     }
 
     .nav-user-badge {
-        font-size: 10px !important;
-        padding: 3px 8px !important;
+        font-size: 11px !important;
+        padding: 4px 8px !important;
     }
 
     div[style*="padding: 40px"],
     div[style*="padding:40px"],
     .main-content > div[style*="padding"],
     .content-wrapper {
-        padding: 10px 8px !important;
+        padding: 12px 10px !important;
     }
 
     .container,
     .container-barang,
     .card {
-        padding: 14px 10px !important;
+        padding: 14px 12px !important;
         border-radius: 12px !important;
     }
 
@@ -1034,7 +1315,7 @@ body {
     }
 
     .header-row {
-        grid-template-columns: 85px 8px auto !important;
+        grid-template-columns: 85px 6px auto !important;
         font-size: 12px !important;
     }
 }
@@ -1043,6 +1324,11 @@ body {
 @media (max-width: 360px) {
     .top-nav {
         height: 52px !important;
+        padding: 0 8px !important;
+    }
+
+    .nav-brand {
+        font-size: 13px !important;
     }
 
     .nav-sub {
@@ -1050,11 +1336,11 @@ body {
     }
 
     .btn-toggle {
-        width: 34px !important;
-        height: 34px !important;
+        width: 36px !important;
+        height: 36px !important;
     }
 
     .container {
-        padding: 10px 8px !important;
+        padding: 12px 8px !important;
     }
 }

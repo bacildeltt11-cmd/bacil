@@ -272,7 +272,7 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
     <div class="main-content">
         <?php include 'top_nav.php'; ?>
         <?php if(isset($_SESSION['success'])){ echo '<div class="alert alert-success" style="padding:12px 20px; background:#d4edda; color:#155724; border-radius:8px; margin-bottom:20px; border:1px solid #c3e6cb;">'.$_SESSION['success'].'</div>'; unset($_SESSION['success']); } if(isset($_SESSION['error'])){ echo '<div class="alert alert-danger" style="padding:12px 20px; background:#f8d7da; color:#721c24; border-radius:8px; margin-bottom:20px; border:1px solid #f5c6cb;">'.$_SESSION['error'].'</div>'; unset($_SESSION['error']); } ?>
-        <div style="padding: 40px;">
+        <div class="content-wrapper">
             <div class="container">
                 <!-- FORM INPUT DI SEBELAH KIRI -->
                 <div class="form-container">
@@ -336,18 +336,20 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                                 </select>
                                 <a href="?modal=nopol<?= $edit_id ? "&id=" . e($edit_id) : '' ?>" class="btn-tambah" title="Tambah Nopol Baru">+</a>
                             </div>
-                            <small style="color: var(--gray);">Pilih nomor polisi dari daftar atau tambah yang baru.</small>
+                            <small style="color: var(--gray); font-size: 12px; display: block; margin-top: 4px;">Pilih nomor polisi dari daftar atau tambah yang baru.</small>
                         </div>
                         <div class="form-group">
                             <label>Jam Berangkat</label>
                             <input type="time" name="jam" class="form-control" value="<?= $edit_data ? $edit_data['jam'] : '' ?>" required>
                         </div>
-                        <button type="submit" name="simpan" class="btn btn-primary" style="margin-top: 15px;" <?= $is_locked ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>
-                            <?= $button_label ?>
-                        </button>
-                        <?php if($edit_id && !$is_locked): ?>
-                            <a href="input_muatan.php" class="btn btn-secondary" style="margin-top: 15px; margin-left: 10px;">Batal</a>
-                        <?php endif; ?>
+                        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                            <button type="submit" name="simpan" class="btn btn-primary" style="flex: 1; min-width: 140px;" <?= $is_locked ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>
+                                <?= $button_label ?>
+                            </button>
+                            <?php if($edit_id && !$is_locked): ?>
+                                <a href="input_muatan.php" class="btn btn-secondary" style="min-width: 100px;">Batal</a>
+                            <?php endif; ?>
+                        </div>
                     </form>
                 </div>
                 <!-- KOTAK BIRU INFO DI SEBELAH KANAN -->

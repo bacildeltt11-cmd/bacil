@@ -69,13 +69,13 @@ if (!empty($_GET['tgl_mulai']) && !empty($_GET['tgl_selesai'])) {
     <?php include 'sidebar.php'; ?>
     <div class="main-content">
         <?php include 'top_nav.php'; ?>
-        <div style="padding: 40px;">
+        <div class="content-wrapper">
 
 <div class="container">
-    <h3 class="header-title">Riwayat Manifest Cargo</h3>
+    <h3 class="header-title">📜 Riwayat Manifest Cargo</h3>
     
-    <div class="filter-card" style="background: #f9fbff; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border-color);">
-        <form method="GET" class="filter-form" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+    <div class="filter-card" style="background: #f8fafc; padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+        <form method="GET" class="filter-form" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                 <label>Nama Kapal</label>
                 <input type="text" name="kapal" class="form-control" placeholder="Cari kapal..." value="<?= e($_GET['kapal'] ?? '') ?>">
@@ -84,21 +84,22 @@ if (!empty($_GET['tgl_mulai']) && !empty($_GET['tgl_selesai'])) {
                 <label>Nomor Polisi</label>
                 <input type="text" name="nopol" class="form-control" placeholder="Cari nopol..." value="<?= e($_GET['nopol'] ?? '') ?>">
             </div>
-            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 140px;">
                 <label>Dari Tanggal</label>
                 <input type="date" name="tgl_mulai" class="form-control" value="<?= e($_GET['tgl_mulai'] ?? '') ?>">
             </div>
-            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 140px;">
                 <label>Sampai Tanggal</label>
                 <input type="date" name="tgl_selesai" class="form-control" value="<?= e($_GET['tgl_selesai'] ?? '') ?>">
             </div>
-            <div class="filter-actions" style="display: flex; gap: 10px;">
-                <button type="submit" class="btn btn-primary">🔍 Filter</button>
-                <a href="data.php" class="btn btn-secondary">Reset</a>
+            <div class="filter-actions" style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" style="min-width: 90px;">🔍 Filter</button>
+                <a href="data.php" class="btn btn-secondary" style="min-width: 70px;">Reset</a>
             </div>
         </form>
     </div>
     
+    <div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
     <div class="table-wrapper">
     <table class="table-custom">
         <thead>
@@ -127,17 +128,17 @@ if (!empty($_GET['tgl_mulai']) && !empty($_GET['tgl_selesai'])) {
                 <td><?= $no++; ?></td>
                 <td><?= tgl_indo($row['tanggal']); ?></td>
                 <td><strong><?= e($row['kapal']); ?></strong></td>
-                <td><?= e($row['nopol']); ?></td>
+                <td><span style="background:#f1f5f9; padding:3px 8px; border-radius:6px; font-weight:600;"><?= e($row['nopol']); ?></span></td>
                 <td><?= e($row['tujuan']); ?></td>
                 <td><?= e($row['jam']); ?></td>
                 <td>
-                    <a href="preview_manifest_lama.php?id=<?= e($id_str); ?>" class="btn btn-primary btn-sm">Lihat / Cetak</a>
+                    <a href="preview_manifest_lama.php?id=<?= e($id_str); ?>" class="btn-pill btn-pill-view">📄 Lihat / Cetak</a>
                 </td>
             </tr>
             <?php 
                 }
             } else {
-                echo "<tr><td colspan='7' class='no-data'>Belum ada data manifest tersimpan.</td></tr>";
+                echo "<tr><td colspan='7' class='no-data' style='padding:30px; color:#64748b; text-align:center;'>Belum ada data manifest tersimpan.</td></tr>";
             }
             ?>
         </tbody>
