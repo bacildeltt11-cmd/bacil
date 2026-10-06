@@ -78,10 +78,10 @@ $is_admin = !$is_boss;
         <span class="bottom-nav-label">Riwayat</span>
     </a>
 
-    <button type="button" class="bottom-nav-item btn-bottom-menu" onclick="toggleSidebar()" aria-label="Menu Lengkap">
-        <span class="bottom-nav-icon">☰</span>
-        <span class="bottom-nav-label">Menu</span>
-    </button>
+    <a href="logout.php" class="bottom-nav-item nav-item-logout" onclick="return confirm('Yakin ingin keluar?');" aria-label="Keluar">
+        <span class="bottom-nav-icon">🚪</span>
+        <span class="bottom-nav-label">Keluar</span>
+    </a>
 </nav>
 
 <script>

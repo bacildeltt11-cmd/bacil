@@ -650,6 +650,23 @@ a,
 
 /* 2. MID-SIZED MOBILE & SMARTPHONES (Up to 768px) */
 @media (max-width: 768px) {
+    /* Hide Sidebar, Drawer Overlay & Hamburger Toggle on Mobile (Bottom Navigation Dock Only) */
+    .sidebar {
+        display: none !important;
+    }
+
+    .sidebar-overlay {
+        display: none !important;
+    }
+
+    .btn-toggle {
+        display: none !important;
+    }
+
+    .nav-title {
+        margin-left: 0 !important;
+    }
+
     /* Mobile Bottom Navigation Bar */
     .mobile-bottom-nav {
         display: flex !important;
@@ -687,6 +704,15 @@ a,
         transition: all 0.2s ease;
         -webkit-tap-highlight-color: transparent;
         min-height: 48px;
+    }
+
+    .bottom-nav-item.nav-item-logout {
+        color: #ef4444 !important;
+    }
+
+    .bottom-nav-item.nav-item-logout:active {
+        color: #dc2626 !important;
+        background: rgba(239, 68, 68, 0.08) !important;
     }
 
     .bottom-nav-item:active {
