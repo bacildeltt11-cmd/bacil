@@ -1212,8 +1212,16 @@ foreach ($jadwal_manifest as $m) {
                         if (info.jsEvent) {
                             info.jsEvent.preventDefault();
                         }
+                        var eventId = info.event.id;
+                        var isListView = info.view && info.view.type && info.view.type.indexOf('list') !== -1;
+
+                        // Jika diklik di tab Agenda (List View), arahkan ke detail input_muatan
+                        if (isListView) {
+                            window.location.href = 'input_muatan.php?id=' + encodeURIComponent(eventId);
+                            return;
+                        }
+
                         <?php if($is_boss): ?>
-                            var eventId = info.event.id;
                             var ext = info.event.extendedProps || {};
                             document.getElementById('edit_event_id').value = eventId;
                             document.getElementById('edit_form_message').innerHTML = '';
