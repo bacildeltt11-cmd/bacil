@@ -437,6 +437,7 @@ foreach ($jadwal_manifest as $m) {
             padding: 12px 14px;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
             border: 1px solid #f1f5f9;
+            cursor: pointer;
         }
 
         .fc-event-card-mobile.status-selesai {
@@ -1187,7 +1188,7 @@ foreach ($jadwal_manifest as $m) {
                         var muatanText = muatanCount > 0 ? ('📦 ' + muatanCount + ' muatan') : '📦 Belum ada muatan';
 
                         if (isList) {
-                            var html = '<div class="fc-event-card-mobile ' + statusClass + '">' +
+                            var html = '<div class="fc-event-card-mobile ' + statusClass + '" onclick="window.location.href=\'input_muatan.php?id=' + encodeURIComponent(arg.event.id) + '\'">' +
                                 '<div class="fc-event-top">' +
                                     '<span class="fc-ship-name">🚢 ' + escapeHtml(kapal) + '</span>' +
                                     '<span class="fc-status-pill ' + statusClass + '">' + statusBadge + '</span>' +
