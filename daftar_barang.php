@@ -200,7 +200,7 @@ if (empty($barang_list)) {
                 <h4>✏️ Edit Stok Barang</h4>
             </div>
             <div class="modal-body">
-                <form method="POST">
+                <form id="edit_form" method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo e($_SESSION['csrf_token']); ?>">
                     <div class="form-group">
                         <label>Nama Barang</label>

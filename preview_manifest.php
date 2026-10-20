@@ -13,7 +13,11 @@ if (!isset($_SESSION['login_rifqy'])) {
     exit;
 }
 
-// Cek apakah ada ID Manifest
+// Cek apakah ada ID Manifest dari URL GET atau Session
+if (isset($_GET['id']) && preg_match('/^[a-f0-9]{24}$/', $_GET['id'])) {
+    $_SESSION['id_manifest'] = $_GET['id'];
+}
+
 if (!isset($_SESSION['id_manifest'])) {
     header("Location: input_keberangkatan.php");
     exit;
@@ -24,6 +28,20 @@ $id_manifest = $_SESSION['id_manifest'];
 // Ambil data header kapal dari database
 $h_obj = findOneDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($id_manifest)]);
 $h = $h_obj ? (array)$h_obj : [];
+
+// Handler ketika tombol 'Selesai ✓' diklik
+if (isset($_GET['action']) && $_GET['action'] === 'selesai') {
+    if ($h && (!isset($h['status']) || $h['status'] !== 'Selesai')) {
+        updateDocument("manifest", 
+            ['_id' => new MongoDB\BSON\ObjectId($id_manifest)],
+            ['$set' => ['status' => 'Selesai']]
+        );
+    }
+    // Hapus id_manifest aktif dari session agar tidak tercampur
+    unset($_SESSION['id_manifest']);
+    header("Location: dashboard.php");
+    exit;
+}
 
 // Fungsi format tanggal Indonesia (dari functions.php)
 ?>
@@ -48,7 +66,7 @@ $h = $h_obj ? (array)$h_obj : [];
 @bottom-center { content: none; }
 @bottom-right { content: none; }
 
-/* CSS PERSIS SEPERTI DESAIN KAMU */
+/* CSS DOKUMEN ASLI */
 body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-color) !important; margin: 0; padding: 0; }
 .kertas { background: #fff; padding: 50px; max-width: 850px; margin: 0 auto 40px auto; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid #ddd; }
 
@@ -95,42 +113,102 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
 .footer{margin-top:60px; display:flex; justify-content:flex-end;}
 .footer-content{text-align:center;}
 .hormat{margin:15px 0 70px 0;}
+
+/* ===== TOMBOL AKSI MODERN & PREMIUM ===== */
 .actions {
-    margin-top: 30px;
+    margin-top: 36px;
     display: flex;
     justify-content: center;
-    gap: 15px;
-    padding-bottom: 50px;
-}
-.btn-print, .btn-back, .btn-next {
-    padding: 12px 25px;
-    border-radius: 30px;
-    font-weight: bold;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    transition: all 0.3s;
-    font-size: 14px;
-    display: flex;
     align-items: center;
+    gap: 12px;
+    padding-bottom: 50px;
+    flex-wrap: wrap;
+}
+
+.action-buttons-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-action-modern {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 12px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    line-height: 1.2;
 }
-.btn-print { background: #fff; border: 2px solid var(--primary-blue); color: var(--primary-blue); }
-.btn-print:hover { background: var(--light-blue); }
-.btn-back { background: #666; color: #fff; }
-.btn-back:hover { background: #444; }
-.btn-next { 
-    background: linear-gradient(135deg, #4caf50, #2e7d32); 
-    color: #fff; 
+
+.btn-action-modern:active {
+    transform: scale(0.98);
 }
-.btn-next:hover { 
-    opacity: 0.9; 
-    transform: translateY(-2px); 
+
+/* Tombol Kembali */
+.btn-act-back {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+.btn-act-back:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Tombol Cetak Browser */
+.btn-act-print {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1.5px solid #93c5fd;
+}
+.btn-act-print:hover {
+    background: #dbeafe;
+    color: #1e40af;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(29, 78, 216, 0.15);
+}
+
+/* Tombol Download PDF */
+.btn-act-pdf {
+    background: #fff;
+    color: #dc2626;
+    border: 1.5px solid #fca5a5;
+}
+.btn-act-pdf:hover {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #f87171;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.15);
+}
+
+/* Tombol Selesai (Setuju / Selesai) */
+.btn-act-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    border: 1.5px solid transparent;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+.btn-act-success:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
 }
 
 @media print{
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    .actions, .sidebar, .btn-toggle, .top-nav { display:none !important; }
+    .actions, .sidebar, .btn-toggle, .top-nav, .mobile-bottom-nav, .table-scroll-hint { display:none !important; }
     body { background: #fff !important; padding: 0; }
     .main-content { padding: 0 !important; }
     .kertas { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
@@ -139,6 +217,16 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
     .header-box h2 { color: #ffcc80 !important; }
     th { background: #0a4dbf !important; color: #fff !important; }
     .total-row td { background: #fff3e0 !important; }
+}
+
+@media (max-width: 600px) {
+    .actions, .action-buttons-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    .btn-action-modern {
+        width: 100%;
+    }
 }
 </style>
 </head>
@@ -221,11 +309,19 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
 </div>
 
 <div class="actions">
-    <a href="input_muatan.php" class="btn-back">← Kembali ke Input</a>
+    <a href="input_muatan.php<?= isset($id_manifest) ? '?id=' . urlencode($id_manifest) : '' ?>" class="btn-action-modern btn-act-back">
+        ← Kembali ke Input
+    </a>
     <div class="action-buttons-group">
-        <button class="btn-print" onclick="window.print()">🖨️ Cetak (Browser)</button>
-        <a href="cetak_pdf.php?id=<?= $id_manifest ?>" class="btn-print" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">📄 Download PDF</a>
-        <a href="dashboard.php" class="btn-next">Selesai ✓</a>
+        <button type="button" class="btn-action-modern btn-act-print" onclick="window.print()">
+            🖨️ Cetak (Browser)
+        </button>
+        <a href="cetak_pdf.php?id=<?= e($id_manifest) ?>" class="btn-action-modern btn-act-pdf">
+            📄 Download PDF
+        </a>
+        <a href="preview_manifest.php?id=<?= e($id_manifest) ?>&action=selesai" class="btn-action-modern btn-act-success">
+            Selesai ✓
+        </a>
     </div>
 </div>
 

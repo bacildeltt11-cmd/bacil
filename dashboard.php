@@ -151,8 +151,10 @@ foreach ($jadwal_manifest as $m) {
         $id = (string)$m_arr['_id'];
         $url = ($_SESSION['login_rifqy'] !== 'Boss') ? 'input_muatan.php?id=' . $id : '';
         $muatan_count = count(findDocuments("muatan", ["id_manifest" => $id]));
-        $status = $muatan_count > 0 ? 'Selesai' : 'Menunggu';
-        $color = $muatan_count > 0 ? '#10b981' : '#f59e0b';
+        // Hijau (Selesai) jika manifest sudah dicetak / dilihat manifest (status == 'Selesai')
+        $is_selesai = (isset($m_arr['status']) && $m_arr['status'] === 'Selesai');
+        $status = $is_selesai ? 'Selesai' : 'Menunggu';
+        $color = $is_selesai ? '#10b981' : '#f59e0b';
         $full_title = 'Manifest ' . ($m_arr['kapal'] ?? '') . ' - ' . ($m_arr['nopol'] ?? '');
         $description = 'Kapal: ' . ($m_arr['kapal'] ?? '') . '\nTujuan: ' . ($m_arr['tujuan'] ?? '') . '\nTanggal: ' . $m_arr['tanggal'] . '\nJam: ' . $m_arr['jam'] . '\nNopol: ' . ($m_arr['nopol'] ?? '') . '\nStatus: ' . $status . '\nMuatan: ' . $muatan_count . ' item';
         $events[] = [

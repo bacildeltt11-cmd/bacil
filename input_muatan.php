@@ -91,18 +91,20 @@ if (isset($_POST['simpan_database'])) {
         exit;
     }
 
-    // Validate barang exists in master list and fetch current pcs
-    // Validate barang exists in master list and fetch current pcs
-    $masterObj = findOneDocument("master_barang", ["nama" => $nama]);
+    // Validate barang exists in master list and fetch current pcs (case-insensitive)
+    $masterObj = findOneDocument("master_barang", [
+        "nama" => new MongoDB\BSON\Regex('^' . preg_quote($nama) . '$', 'i')
+    ]);
     if (!$masterObj) {
         $_SESSION['error'] = "MAAF! Barang [ $nama ] tidak terdaftar. Silakan pilih dari daftar yang ada atau daftarkan barang baru di kotak oranye di bawah.";
         header("Location: input_muatan.php");
         exit;
     }
-    // Cast to array to access pcs
+    // Cast to array to access pcs and canonical name
     $master = (array)$masterObj;
+    $canonical_nama = $master['nama'] ?? $nama;
     // Check available pcs in storage
-    $available_pcs = $master['pcs'] ?? 0;
+    $available_pcs = intval($master['pcs'] ?? 0);
     if ($pcs > $available_pcs) {
         $_SESSION['error'] = "Jumlah PCS yang dimasukkan ($pcs) melebihi stok tersedia ($available_pcs).";
         header("Location: input_muatan.php");
@@ -112,14 +114,14 @@ if (isset($_POST['simpan_database'])) {
     // Insert muatan record
     insertDocument("muatan", [
         "id_manifest" => $id_manifest,
-        "nama_barang" => $nama,
+        "nama_barang" => $canonical_nama,
         "pcs" => $pcs,
         "ton" => $ton,
         "volume" => $vol
     ]);
 
     // Reduce pcs in master_barang storage
-    updateDocument("master_barang", ["nama" => $nama], [
+    updateDocument("master_barang", ["_id" => $masterObj->_id], [
         '$set' => ["pcs" => $available_pcs - $pcs]
     ]);
 }
@@ -157,22 +159,25 @@ if (isset($_POST['update_database'])) {
         exit;
     }
 
-    // Validate barang exists in master list and fetch current pcs
-    $masterObj = findOneDocument("master_barang", ["nama" => $nama]);
+    // Validate barang exists in master list and fetch current pcs (case-insensitive)
+    $masterObj = findOneDocument("master_barang", [
+        "nama" => new MongoDB\BSON\Regex('^' . preg_quote($nama) . '$', 'i')
+    ]);
     if (!$masterObj) {
         $_SESSION['error'] = "MAAF! Update gagal. Nama barang [ $nama ] tidak terdaftar.";
         header("Location: input_muatan.php");
         exit;
     }
-    // Cast to array to access pcs
+    // Cast to array to access pcs and canonical name
     $master = (array)$masterObj;
+    $canonical_nama = $master['nama'] ?? $nama;
 
     // Fetch existing muatan record to get previous pcs
     $oldMuatan = findOneDocument("muatan", ['_id' => new MongoDB\BSON\ObjectId($id_edit)]);
-    $oldPcs = $oldMuatan ? ($oldMuatan->pcs ?? 0) : 0;
+    $oldPcs = $oldMuatan ? intval($oldMuatan->pcs ?? 0) : 0;
 
     // Calculate stock after reverting old pcs and applying new pcs
-    $available_pcs = ($master['pcs'] ?? 0) + $oldPcs; // add back old pcs
+    $available_pcs = intval($master['pcs'] ?? 0) + $oldPcs; // add back old pcs
     if ($pcs > $available_pcs) {
         $_SESSION['error'] = "Jumlah PCS yang dimasukkan ($pcs) melebihi stok tersedia ($available_pcs).";
         header("Location: input_muatan.php");
@@ -183,7 +188,7 @@ if (isset($_POST['update_database'])) {
     updateDocument("muatan",
         ['_id' => new MongoDB\BSON\ObjectId($id_edit)],
         ['$set' => [
-            "nama_barang" => $nama,
+            "nama_barang" => $canonical_nama,
             "pcs" => $pcs,
             "ton" => $ton,
             "volume" => $vol
@@ -192,7 +197,7 @@ if (isset($_POST['update_database'])) {
 
     // Adjust master_barang pcs (subtract new pcs, add back old pcs difference)
     $new_stock = $available_pcs - $pcs; // resulting stock after update
-    updateDocument("master_barang", ["nama" => $nama], [
+    updateDocument("master_barang", ["_id" => $masterObj->_id], [
         '$set' => ["pcs" => $new_stock]
     ]);
 
@@ -219,13 +224,15 @@ if (isset($_GET['hapus'])) {
     if ($muatanObj) {
         $muatan = (array)$muatanObj;
         $nama = $muatan['nama_barang'] ?? '';
-        $pcs  = $muatan['pcs'] ?? 0;
-        // Update master stock by adding back the pcs
-        $masterObj = findOneDocument("master_barang", ['nama' => $nama]);
+        $pcs  = intval($muatan['pcs'] ?? 0);
+        // Update master stock by adding back the pcs (case-insensitive)
+        $masterObj = findOneDocument("master_barang", [
+            'nama' => new MongoDB\BSON\Regex('^' . preg_quote($nama) . '$', 'i')
+        ]);
         if ($masterObj) {
             $master = (array)$masterObj;
-            $new_stock = ($master['pcs'] ?? 0) + $pcs;
-            updateDocument("master_barang", ['nama' => $nama], ['$set' => ['pcs' => $new_stock]]);
+            $new_stock = intval($master['pcs'] ?? 0) + $pcs;
+            updateDocument("master_barang", ['_id' => $masterObj->_id], ['$set' => ['pcs' => $new_stock]]);
         }
     }
     // Delete the muatan entry
