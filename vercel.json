@@ -9,8 +9,11 @@
   },
   "routes": [
     {
-      "src": "/style.css",
-      "dest": "/style.css"
+      "src": "/(style\\.css|.*\\.(?:css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
+      "headers": {
+        "cache-control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",

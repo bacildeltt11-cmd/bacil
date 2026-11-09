@@ -8,13 +8,18 @@ require_once 'config.php';
 
 $client = new MongoDB\Driver\Manager($mongodb_uri);
 
-try {
-    $client->executeCommand($database, new MongoDB\Driver\Command(['ping' => 1]));
-} catch (MongoDB\Driver\Exception\ConnectionException $e) {
-    echo "Koneksi gagal: " . $e->getMessage();
-    exit;
+// Skip synchronous ping on every serverless invocation to eliminate connection latency.
+// Driver will automatically establish connection when first query executes.
+if (isset($_GET['test_connection']) && $_GET['test_connection'] == '1') {
+    try {
+        $client->executeCommand($database, new MongoDB\Driver\Command(['ping' => 1]));
+        echo "Koneksi MongoDB OK";
+        exit;
+    } catch (MongoDB\Driver\Exception\ConnectionException $e) {
+        echo "Koneksi gagal: " . $e->getMessage();
+        exit;
+    }
 }
-
 /**
  * MongoDB-backed Session Handler
  * Stores session data in MongoDB 'sessions' collection for seamless persistence across Vercel serverless containers.
@@ -238,19 +243,15 @@ function createIndexes() {
     }
 }
 
-// Pastikan user boss default ada (hanya jika belum)
-try {
-    ensureBossUserExists();
-} catch (Exception $e) {
-    error_log("Boss check skipped: " . $e->getMessage());
-}
-
-// createIndexes hanya jika dipanggil via query param ?init_db=1
+// Inisialisasi admin boss atau indexes hanya jika dipanggil via parameter khusus ?init_db=1
 if (isset($_GET['init_db']) && $_GET['init_db'] == '1') {
     try {
+        ensureBossUserExists();
         createIndexes();
+        echo "DB Initialized successfully";
+        exit;
     } catch (Exception $e) {
-        error_log("Index creation skipped: " . $e->getMessage());
+        error_log("DB init error: " . $e->getMessage());
     }
 }
 

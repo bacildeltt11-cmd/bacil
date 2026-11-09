@@ -84,35 +84,35 @@ if ($_SESSION['login_rifqy'] === 'Boss' && $_SERVER['REQUEST_METHOD'] === 'POST'
     }
 }
 
-// Ambil total manifest menggunakan countDocuments
+// Optimasi Dashboard: Ambil data secara efisien tanpa N+1 query
 $total_manifest = countDocuments("manifest", []);
 
 // Ambil 3 riwayat terbaru
 $riwayat_terbaru = findDocuments("manifest", [], ['sort' => ['_id' => -1], 'limit' => 3]);
 
-// Fungsi format tanggal Indonesia (moved to functions.php)
+// Ambil semua manifest untuk Boss jadwal & statistik
+$semua_manifest = findDocuments("manifest", []);
 
-// Data untuk Chart (Statistik Manifest per Bulan) - using PHP processing (more compatible)
-$semua_manifest = findDocuments("manifest", []); // Get all manifests
 $stats_data = [];
+$jadwal_manifest = [];
+
 foreach ($semua_manifest as $m) {
     $m_arr = (array)$m;
     if (isset($m_arr['tanggal'])) {
         $month = date("Y-m", strtotime($m_arr['tanggal']));
-        if (!isset($stats_data[$month])) {
-            $stats_data[$month] = 0;
+        if ($month !== false && $month !== '1970-01') {
+            $stats_data[$month] = ($stats_data[$month] ?? 0) + 1;
         }
-        $stats_data[$month]++;
+    }
+    if (($m_arr['created_by'] ?? '') === 'Boss') {
+        $jadwal_manifest[] = $m;
     }
 }
 ksort($stats_data); // Urutkan berdasarkan bulan
 $chart_labels = json_encode(array_keys($stats_data));
 $chart_values = json_encode(array_values($stats_data));
 
-// Data untuk Calendar
-$jadwal_manifest = findDocuments("manifest", ["created_by" => "Boss"]) ?: [];
-
-// Data dropdown untuk modal edit/tambah
+// Data dropdown untuk modal edit/tambah (fallback cepat)
 $master_kapal = findDocuments("master_kapal", []);
 $kapals = [];
 foreach($master_kapal as $k) $kapals[] = $k->nama;
@@ -128,21 +128,54 @@ $nopols = [];
 foreach($master_nopol as $n) $nopols[] = $n->nopol;
 if(empty($nopols)) $nopols = ['H 8454 QQ', 'H 1316 PH', 'H 1370 TA', 'H 8470 QQ', 'H 9773 BQ', 'H 8211 BA', 'AA 8519 OF', 'BA 9937 FU'];
 
+// Pre-fetch muatan count dengan 1x query aggregate (menghindari N+1 roundtrips ke MongoDB)
+$muatan_counts_map = [];
+try {
+    $muatan_aggr = aggregate("muatan", [
+        ['$group' => ['_id' => '$id_manifest', 'count' => ['$sum' => 1]]]
+    ]);
+    foreach ($muatan_aggr as $row) {
+        if (isset($row->_id)) {
+            $muatan_counts_map[(string)$row->_id] = (int)$row->count;
+        }
+    }
+} catch (\Throwable $e) {
+    error_log("Gagal aggregate muatan count: " . $e->getMessage());
+}
+
 // Prepare events for FullCalendar
 $events = [];
+$tz = new DateTimeZone('Asia/Jakarta');
+
 foreach ($jadwal_manifest as $m) {
     $m_arr = (array)$m;
-    if (isset($m_arr['tanggal']) && isset($m_arr['jam'])) {
-        $title = 'Manifest ' . $m_arr['kapal'] . ' - ' . $m_arr['nopol'];
-        $tz = new DateTimeZone('Asia/Jakarta');
-        $dt = DateTime::createFromFormat('Y-m-d H:i', $m_arr['tanggal'] . ' ' . $m_arr['jam'], $tz);
-        if (!$dt) {
-            $dt = new DateTime($m_arr['tanggal'] . ' ' . $m_arr['jam'], $tz);
+    $tgl = trim($m_arr['tanggal'] ?? '');
+    $jam = trim($m_arr['jam'] ?? '');
+
+    if ($tgl !== '' && $jam !== '') {
+        // Parse waktu dengan validasi ketat dan fallback aman
+        $dt = null;
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl)) {
+            $dt = DateTime::createFromFormat('Y-m-d H:i', $tgl . ' ' . $jam, $tz) ?: null;
+            if (!$dt) {
+                $dt = DateTime::createFromFormat('Y-m-d H:i:s', $tgl . ' ' . $jam, $tz) ?: null;
+            }
         }
+
+        // Fallback jika format tanggal non-standar namun masih valid parse
+        if (!$dt) {
+            try {
+                $dt = new DateTime($tgl . ' ' . $jam, $tz);
+            } catch (\Throwable $e) {
+                // Jika string tanggal rusak (contoh: "ripkii 20:00"), gunakan waktu sekarang agar tidak crash
+                $dt = new DateTime('now', $tz);
+            }
+        }
+
         $start = $dt->format('c'); // ISO8601 with offset
         $end_dt = clone $dt;
         $end_dt->add(new DateInterval('PT1H'));
-        // Jika berakhir keesokan hari (mis. start 23:30 +1h -> 00:30), clamp ke 23:59:59 supaya tidak melebar ke kotak tanggal berikutnya
+        // Jika berakhir keesokan hari, clamp ke 23:59:59
         if ($end_dt->format('Y-m-d') !== $dt->format('Y-m-d')) {
             $end_dt = clone $dt;
             $end_dt->setTime(23, 59, 59);
@@ -150,13 +183,13 @@ foreach ($jadwal_manifest as $m) {
         $end = $end_dt->format('c');
         $id = (string)$m_arr['_id'];
         $url = ($_SESSION['login_rifqy'] !== 'Boss') ? 'input_muatan.php?id=' . $id : '';
-        $muatan_count = count(findDocuments("muatan", ["id_manifest" => $id]));
-        // Hijau (Selesai) jika manifest sudah dicetak / dilihat manifest (status == 'Selesai')
+        $muatan_count = $muatan_counts_map[$id] ?? 0;
+        // Hijau (Selesai) jika manifest sudah dicetak / berstatus Selesai
         $is_selesai = (isset($m_arr['status']) && $m_arr['status'] === 'Selesai');
         $status = $is_selesai ? 'Selesai' : 'Menunggu';
         $color = $is_selesai ? '#10b981' : '#f59e0b';
         $full_title = 'Manifest ' . ($m_arr['kapal'] ?? '') . ' - ' . ($m_arr['nopol'] ?? '');
-        $description = 'Kapal: ' . ($m_arr['kapal'] ?? '') . '\nTujuan: ' . ($m_arr['tujuan'] ?? '') . '\nTanggal: ' . $m_arr['tanggal'] . '\nJam: ' . $m_arr['jam'] . '\nNopol: ' . ($m_arr['nopol'] ?? '') . '\nStatus: ' . $status . '\nMuatan: ' . $muatan_count . ' item';
+        $description = 'Kapal: ' . ($m_arr['kapal'] ?? '') . '\nTujuan: ' . ($m_arr['tujuan'] ?? '') . '\nTanggal: ' . $tgl . '\nJam: ' . $jam . '\nNopol: ' . ($m_arr['nopol'] ?? '') . '\nStatus: ' . $status . '\nMuatan: ' . $muatan_count . ' item';
         $events[] = [
             'title' => $full_title,
             'start' => $start,
@@ -170,8 +203,8 @@ foreach ($jadwal_manifest as $m) {
                 'tujuan' => $m_arr['tujuan'] ?? '',
                 'jenis' => $m_arr['jenis'] ?? '',
                 'nopol' => $m_arr['nopol'] ?? '',
-                'jam' => $m_arr['jam'] ?? '',
-                'tanggal' => $m_arr['tanggal'] ?? '',
+                'jam' => $jam,
+                'tanggal' => $tgl,
                 'status' => $status,
                 'muatan_count' => $muatan_count
             ],
