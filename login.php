@@ -66,7 +66,7 @@ if(isset($_POST['login'])){
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, var(--light-blue), #cce0ff);
+            background: linear-gradient(135deg, var(--light-blue), #ccffddff);
             padding: 20px 16px;
             margin: 0;
             box-sizing: border-box;
