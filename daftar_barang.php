@@ -1,34 +1,41 @@
 <?php
+// Kode di bawah digunakan untuk memuat helper koneksi database MongoDB
 require_once 'koneksi_mongodb.php';
+
+// Kode di bawah digunakan untuk memuat file fungsi utilitas (sanitasi, CSRF, dll.)
 require_once 'functions.php';
 
+// Kode di bawah digunakan untuk memulai session jika belum berjalan
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Pengecekan login
+// Kode di bawah digunakan untuk memeriksa apakah user sudah login ke sistem
 if (!isset($_SESSION['login_rifqy'])) {
     $_SESSION['error'] = 'Silakan login terlebih dahulu.';
     header("Location: login.php");
     exit;
 }
 
-// Generate CSRF token if not exists
+// Kode di bawah digunakan untuk menghasilkan token CSRF jika belum ada di session
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+// Kode di bawah digunakan untuk memeriksa level hak akses user aktif (Boss atau Operator/Admin)
 $is_boss = isset($_SESSION['login_rifqy']) && $_SESSION['login_rifqy'] === 'Boss';
 $is_admin = !$is_boss;
 
-// Handle tambah barang (hanya admin)
+// Kode di bawah digunakan untuk memproses penambahan jenis barang baru (hanya role Admin/Operator)
 if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_barang'])) {
+    // Memverifikasi token CSRF demi keamanan request form
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
     $nama = sanitize_string($_POST['nama_barang'] ?? '');
     $pcs = intval($_POST['pcs'] ?? 0);
     if (!empty($nama)) {
+        // Cek apakah nama barang sudah ada di master_barang
         $exist = findOneDocument("master_barang", ['nama' => $nama]);
         if (!$exist) {
             insertDocument("master_barang", ['nama' => $nama, 'pcs' => $pcs]);
@@ -43,7 +50,7 @@ if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_bara
     exit;
 }
 
-// Handle hapus barang (hanya admin)
+// Kode di bawah digunakan untuk memproses penghapusan barang dari master (hanya role Admin/Operator)
 if ($is_admin && isset($_GET['hapus'])) {
     $nama = sanitize_string($_GET['hapus']);
     if (!empty($nama)) {
@@ -54,7 +61,7 @@ if ($is_admin && isset($_GET['hapus'])) {
     exit;
 }
 
-// Handle update pcs (edit) for master barang (admin)
+// Kode di bawah digunakan untuk memproses pengubahan (update) jumlah PCS stok master barang
 if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_barang'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
@@ -76,7 +83,7 @@ if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_b
     exit;
 }
 
-// If admin requests edit form, load data
+// Mengambil data barang jika admin meminta form edit via URL
 $edit_data = null;
 if ($is_admin && isset($_GET['edit'])) {
     $edit_nama = sanitize_string($_GET['edit']);
@@ -84,7 +91,7 @@ if ($is_admin && isset($_GET['edit'])) {
     if ($edit_obj) $edit_data = (array)$edit_obj;
 }
 
-// Ambil data master barang
+// Kode di bawah digunakan untuk mengambil semua master barang dari MongoDB terurut abjad
 $docs = findDocuments("master_barang", [], ['sort' => ['nama' => 1]]);
 $barang_list = [];
 foreach ($docs as $d) {
@@ -94,6 +101,7 @@ foreach ($docs as $d) {
     }
 }
 
+// Menyediakan daftar nama default jika database masih dalam kondisi awal kosong
 if (empty($barang_list)) {
     $default_names = ["Alpukat","Apel","Bawang Putih","Bawang Goreng","Bombay","Brambang","Cabe","Emping","Garam","Gula","Jipan","Kacang Hijau","Kacang Tanah","Kemiri","Kentang","Kertas","Ketan","Kol","Krupuk","Kunir","Mangga","Plastik","Rempah","Salak","Sawi","Telur","Tomat","Terong","Wortel","Trasi","Kurma","Keluak","Kacang kupas"];
     foreach ($default_names as $name) {
@@ -107,6 +115,7 @@ if (empty($barang_list)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Barang - CV. MANUNGGAL</title>
+    <!-- Memuat file style CSS -->
     <link rel="stylesheet" href="style.css">
     <style>
         .barang-tag {background: linear-gradient(135deg, #e0f0ff, #c3d9f0);color:#0a4dbf;padding:8px 16px;border-radius:999px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:transform 0.2s;}
@@ -121,21 +130,27 @@ if (empty($barang_list)) {
 </head>
 <body>
 <div class="layout-wrapper">
+<!-- Memuat sidebar samping -->
 <?php include 'sidebar.php'; ?>
 <div class="main-content">
+<!-- Memuat bar navigasi atas -->
 <?php include 'top_nav.php'; ?>
 <div class="content-wrapper">
     <h3 class="header-title">📦 Daftar Barang Master</h3>
     <?php
+    // Menampilkan pesan error jika ada
     if (isset($_SESSION['error'])) {
         echo '<div class="alert alert-danger" style="margin: 15px 0; padding:12px 20px; background:#f8d7da; color:#721c24; border-radius:8px; border:1px solid #f5c6cb;">' . $_SESSION['error'] . '</div>';
         unset($_SESSION['error']);
     }
+    // Menampilkan notifikasi popup jika operasi penambahan/pengubahan sukses
     if (isset($_SESSION['success_msg'])) {
         echo '<script>window.__barangSuccess = ' . json_encode($_SESSION['success_msg']) . ';</script>';
         unset($_SESSION['success_msg']);
     }
     ?>
+    
+    <!-- Kotak Form Tambah Barang Baru khusus untuk role Admin -->
     <?php if ($is_admin): ?>
     <div class="add-barang-box" style="background:#fff8e1; border-left:5px solid #ff9800; padding:18px 20px; border-radius:12px; margin-bottom:20px;">
         <strong style="color:#e65100; font-size: 15px;">➕ Tambah Barang Baru</strong>
@@ -148,18 +163,23 @@ if (empty($barang_list)) {
         <small style="color:#856404; display:block; margin-top:8px; font-size:12px;">Admin dapat menambahkan nama barang baru yang akan tersedia untuk dipilih saat input muatan.</small>
     </div>
     <?php else: ?>
+    <!-- Pesan informasi untuk role Boss yang hanya bertindak sebagai pemantau -->
     <div style="background:#f0f4f8; padding:14px 18px; border-radius:10px; margin-bottom:20px; font-size:13px; color:#555;">
         <strong>Mode Monitoring (Boss)</strong> — Daftar ini hanya untuk dilihat. Penambahan barang baru hanya dapat dilakukan oleh Admin.
     </div>
     <?php endif; ?>
+    
+    <!-- Kontainer tabel daftar master barang -->
     <div class="container-barang">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
             <h4 style="margin:0; color:#0a4dbf; font-size: 16px;">Daftar Barang yang Tersedia (<?php echo count($barang_list); ?>)</h4>
+            <!-- Input pencarian barang secara realtime (JS live filter) -->
             <div style="position:relative; max-width:320px; width:100%;">
                 <input type="text" id="search-barang" class="form-control" placeholder="Cari nama barang..." style="padding-left:35px; width:100%; box-sizing:border-box; border-radius:20px;">
                 <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#888; font-size:14px;">🔍</span>
             </div>
         </div>
+        
         <?php if (!empty($barang_list)): ?>
         <div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
         <div class="table-wrapper">
@@ -179,7 +199,9 @@ if (empty($barang_list)) {
                     <?php if ($is_admin): ?>
                     <td style="padding:10px 14px; border-bottom:1px solid #eee; text-align:center;">
                         <div class="action-btn-group">
+                            <!-- Tombol membuka modal edit stok PCS barang -->
                             <a href="javascript:void(0);" class="btn-pill btn-pill-edit edit" data-nama="<?php echo e($item['nama']); ?>" data-pcs="<?php echo e($item['pcs']); ?>" title="Edit PCS">✏️ Edit</a>
+                            <!-- Tombol menghapus barang dari master list -->
                             <a href="?hapus=<?php echo urlencode($item['nama']); ?>" class="btn-pill btn-pill-del del" title="Hapus Barang" onclick="return confirm('Hapus \'<?php echo e($item['nama']); ?>\' dari daftar?')">🗑️ Hapus</a>
                         </div>
                     </td>
@@ -193,6 +215,8 @@ if (empty($barang_list)) {
         <p style="color:#888; padding:20px; text-align:center;">Belum ada daftar barang.</p>
         <?php endif; ?>
     </div>
+
+    <!-- Modal Popup Form Edit Stok PCS Barang -->
     <?php if ($is_admin): ?>
     <div id="edit_modal" class="modal-overlay" style="display:none;" onclick="if (event.target === this) this.style.display='none'">
         <div class="modal" onclick="event.stopImmediatePropagation()">
@@ -222,7 +246,9 @@ if (empty($barang_list)) {
 </div>
 </div>
 </div>
+
 <script>
+// Kode JavaScript di bawah digunakan untuk memunculkan notifikasi popup sukses aksi
 function showSuccessPopup(message) {
     var popup = document.createElement('div');
     popup.className = 'success-popup';
@@ -231,12 +257,11 @@ function showSuccessPopup(message) {
     setTimeout(function(){ if(popup && popup.parentNode){ popup.parentNode.removeChild(popup); } }, 2000);
 }
 
-// Edit button handler (JS)
+// Handler JavaScript untuk tombol edit: mengisi data form modal dan menampilkannya
 document.querySelectorAll('.edit').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
         var nama = this.getAttribute('data-nama');
         var pcs = this.getAttribute('data-pcs');
-        // Populate modal form fields
         var modal = document.getElementById('edit_modal');
         var form = document.getElementById('edit_form');
         if (!modal || !form) return;
@@ -246,7 +271,7 @@ document.querySelectorAll('.edit').forEach(function(btn) {
     });
 });
 
-// Close modal
+// Handler JavaScript untuk menutup modal edit
 var closeBtn = document.getElementById('edit_close');
 if (closeBtn) {
     closeBtn.addEventListener('click', function(){
@@ -254,6 +279,7 @@ if (closeBtn) {
     });
 }
 
+// Handler JavaScript untuk fitur pencarian realtime daftar barang
 document.getElementById('search-barang')?.addEventListener('input', function(e){
     const searchTerm = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('#barang-table tbody tr');

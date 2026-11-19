@@ -1,33 +1,35 @@
 <?php
+// Kode di bawah digunakan untuk memuat file koneksi MongoDB dan file utilitas fungsi
 require_once 'koneksi_mongodb.php';
 require_once 'functions.php';
 
+// Kode di bawah digunakan untuk memulai session jika belum aktif
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Ambil ID dari URL
+// Kode di bawah digunakan untuk mengambil parameter ID manifest dari URL; jika tidak ada, redirect ke data.php
 if (!isset($_GET['id'])) {
     header("Location: data.php");
     exit;
 }
 $id_manifest = $_GET['id'];
 
-// Ambil data header kapal berdasarkan ID di URL
+// Kode di bawah digunakan untuk mengambil data header manifest dari MongoDB berdasarkan ObjectId
 $h_obj = findOneDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($id_manifest)]);
 $h = $h_obj ? (array)$h_obj : [];
-
-// Fungsi format tanggal Indonesia (from functions.php)
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preview Manifest - CV. MANUNGGAL</title>
+    <!-- Memuat file CSS utama untuk styling elemen antarmuka -->
     <link rel="stylesheet" href="style.css">
 <style>
+/* Kode styling CSS untuk mensimulasikan tampilan lembar kertas cetak A4 */
 body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-color) !important; margin: 0; padding: 0; }
 .kertas { background: #fff; padding: 50px; max-width: 850px; margin: 0 auto 40px auto; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid #ddd; }
 .header { text-align:center; margin-bottom:30px; padding:30px; background:#0a4dbf; color:#fff; border-radius:12px; }
@@ -67,6 +69,7 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
 .btn-next { background: var(--primary-blue); color: #fff; }
 .btn-next:hover { opacity: 0.9; transform: translateY(-2px); }
 
+/* Kode CSS di bawah khusus untuk mode pencetakan (Print Preview): menyembunyikan tombol navigasi dan menyesuaikan warna */
 @media print{
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .actions, .sidebar, .btn-toggle, .top-nav { display:none !important; }
@@ -82,85 +85,94 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
 </head>
 <body>
 
+<!-- Pembungkus layout halaman -->
 <div class="layout-wrapper">
+    <!-- Memuat sidebar samping -->
     <?php include 'sidebar.php'; ?>
     <div class="main-content">
+        <!-- Memuat bar navigasi atas -->
         <?php include 'top_nav.php'; ?>
         <div class="content-wrapper">
 
+<!-- Lembar dokumen pratinjau manifest arsip -->
 <div class="kertas">
+    <!-- Header dokumen manifest -->
     <div class="header">
       <h2>CV. MANUNGGAL</h2>
       <h3>CARGO MANIFEST (ARSIP)</h3>
     </div>
 
-        <div class="info">
-            <div style="display:grid;grid-template-columns:max-content max-content 1fr;gap:5px 10px">
-                <div>Nama Kapal</div><div>:</div><div><?= e($h['kapal'] ?? '') ?></div>
-                <div>Tanggal</div><div>:</div><div><?= tgl_indo($h['tanggal'] ?? '') ?></div>
-                <div>Tujuan</div><div>:</div><div><?= e($h['tujuan'] ?? '') ?></div>
-                <div>Jenis</div><div>:</div><div><?= e($h['jenis'] ?? '') ?></div>
-                <div>Nopol</div><div>:</div><div><?= e($h['nopol'] ?? '') ?></div>
-                <div>Jam</div><div>:</div><div><?= e($h['jam'] ?? '') ?> WIB</div>
-            </div>
+    <!-- Informasi detail keberangkatan kapal -->
+    <div class="info">
+        <div style="display:grid;grid-template-columns:max-content max-content 1fr;gap:5px 10px">
+            <div>Nama Kapal</div><div>:</div><div><?= e($h['kapal'] ?? '') ?></div>
+            <div>Tanggal</div><div>:</div><div><?= tgl_indo($h['tanggal'] ?? '') ?></div>
+            <div>Tujuan</div><div>:</div><div><?= e($h['tujuan'] ?? '') ?></div>
+            <div>Jenis</div><div>:</div><div><?= e($h['jenis'] ?? '') ?></div>
+            <div>Nopol</div><div>:</div><div><?= e($h['nopol'] ?? '') ?></div>
+            <div>Jam</div><div>:</div><div><?= e($h['jam'] ?? '') ?> WIB</div>
         </div>
-
-<div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
-<div class="table-wrapper">
-    <table>
-    <thead>
-    <tr>
-        <th>NO</th>
-        <th>NAMA BARANG</th>
-        <th>PCS</th>
-        <th>TON</th>
-        <th>VOLUME</th>
-    </tr>
-    </thead>
-    <tbody>
-        <?php
-        $no = 1;
-        $total_hitung_otomatis = 0;
-        $muatan_docs = findDocuments("muatan", ["id_manifest" => $id_manifest]);
-        foreach($muatan_docs as $row_obj){
-            $row = (array)$row_obj;
-            $total_hitung_otomatis += (float)$row['ton'];
-        ?>
-        <tr>
-            <td><?= $no++ ?></td>
-            <td style="text-align:left; padding-left:10px;"><?= e($row['nama_barang']) ?></td>
-            <td><?= e($row['pcs']) ?></td>
-            <td><?= e($row['ton']) ?></td>
-            <td><?= isset($row['volume']) && $row['volume'] ? e($row['volume']) : "-" ?></td>
-        </tr>
-        <?php } ?>
-    </tbody>
-    <tfoot>
-    <tr class="total-row">
-        <td colspan="3">TOTAL</td>
-        <td>
-            ± 
-            <?php 
-            // LOGIKA PERBAIKAN:
-            // Mengambil data dari kolom nomor 8 di database kamu (total_ton_manual)
-            $angka_manual = isset($h['total_ton_manual']) ? $h['total_ton_manual'] : '';
-
-            if ($angka_manual != '' && $angka_manual != '0') {
-                // Jika kamu ngetik 20, maka muncul 20
-                echo $angka_manual; 
-            } else {
-                // Jika kamu belum ngetik apa-apa, pakai hitungan sistem (22.5)
-                echo $total_hitung_otomatis; 
-            }
-            ?> 
-            Ton
-        </td>
-        <td></td>
-    </tr>
-    </tfoot>
-    </table>
     </div>
 
+    <!-- Petunjuk scroll tabel pada perangkat layar sentuh -->
+    <div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
+    
+    <!-- Tabel rincian barang muatan -->
+    <div class="table-wrapper">
+        <table>
+        <thead>
+        <tr>
+            <th>NO</th>
+            <th>NAMA BARANG</th>
+            <th>PCS</th>
+            <th>TON</th>
+            <th>VOLUME</th>
+        </tr>
+        </thead>
+        <tbody>
+            <?php
+            $no = 1;
+            $total_hitung_otomatis = 0;
+            // Kode di bawah digunakan untuk mengambil seluruh item muatan barang yang terkait dengan id_manifest ini
+            $muatan_docs = findDocuments("muatan", ["id_manifest" => $id_manifest]);
+            foreach($muatan_docs as $row_obj){
+                $row = (array)$row_obj;
+                $total_hitung_otomatis += (float)$row['ton'];
+            ?>
+            <tr>
+                <td><?= $no++ ?></td>
+                <td style="text-align:left; padding-left:10px;"><?= e($row['nama_barang']) ?></td>
+                <td><?= e($row['pcs']) ?></td>
+                <td><?= e($row['ton']) ?></td>
+                <td><?= isset($row['volume']) && $row['volume'] ? e($row['volume']) : "-" ?></td>
+            </tr>
+            <?php } ?>
+        </tbody>
+        <tfoot>
+        <!-- Baris total tonase keseluruhan -->
+        <tr class="total-row">
+            <td colspan="3">TOTAL</td>
+            <td>
+                ± 
+                <?php 
+                // Mengambil nilai total ton manual jika diinputkan, jika kosong gunakan hasil hitungan sistem otomatis
+                $angka_manual = isset($h['total_ton_manual']) ? $h['total_ton_manual'] : '';
+
+                if ($angka_manual != '' && $angka_manual != '0') {
+                    echo $angka_manual; 
+                } else {
+                    echo $total_hitung_otomatis; 
+                }
+                ?> 
+                Ton
+            </td>
+            <td></td>
+        </tr>
+        </tfoot>
+        </table>
+    </div>
+
+    <!-- Bagian tanda tangan resmi manifest -->
     <div class="footer">
         <div class="footer-content">
             <div>Semarang, <?= tgl_indo($h['tanggal']) ?></div>
@@ -170,12 +182,14 @@ th,td{border:1px solid #000;padding:10px;text-align:center;}
     </div>
 </div>
 
+<!-- Tombol aksi: kembali ke riwayat, cetak langsung via browser, atau download dokumen PDF -->
 <div class="actions">
     <a href="data.php" class="btn-back">← Kembali ke Riwayat</a>
     <button class="btn-print" onclick="window.print()">🖨️ Cetak Ulang</button>
     <a href="cetak_pdf.php?id=<?= e($id_manifest) ?>" class="btn-print" style="text-decoration:none; display:inline-block; line-height:20px;">📄 Download PDF</a>
 </div>
 
+        </div>
     </div>
 </div>
 

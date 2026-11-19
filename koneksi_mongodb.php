@@ -1,15 +1,17 @@
 <?php
+// Kode di bawah digunakan untuk memastikan file koneksi MongoDB hanya dimuat satu kali
 if (defined('KONEKSI_MONGODB_LOADED')) {
     return;
 }
 define('KONEKSI_MONGODB_LOADED', true);
 
+// Kode di bawah digunakan untuk memuat file konfigurasi URI dan nama database
 require_once 'config.php';
 
+// Kode di bawah digunakan untuk menginisialisasi driver client MongoDB Manager
 $client = new MongoDB\Driver\Manager($mongodb_uri);
 
-// Skip synchronous ping on every serverless invocation to eliminate connection latency.
-// Driver will automatically establish connection when first query executes.
+// Kode di bawah digunakan untuk menguji koneksi ke MongoDB Atlas jika diakses dengan parameter ?test_connection=1
 if (isset($_GET['test_connection']) && $_GET['test_connection'] == '1') {
     try {
         $client->executeCommand($database, new MongoDB\Driver\Command(['ping' => 1]));
@@ -20,14 +22,16 @@ if (isset($_GET['test_connection']) && $_GET['test_connection'] == '1') {
         exit;
     }
 }
+
 /**
- * MongoDB-backed Session Handler
- * Stores session data in MongoDB 'sessions' collection for seamless persistence across Vercel serverless containers.
+ * Class Session Handler Berbasis MongoDB
+ * Menyimpan data session PHP ke dalam collection 'sessions' di MongoDB agar persistensi session tetap terjaga (serverless ready).
  */
 class MongoDBSessionHandler implements SessionHandlerInterface {
     private $client;
     private $database;
 
+    // Konstruktor untuk menerima objek client manager dan nama database
     public function __construct($client, $database) {
         $this->client = $client;
         $this->database = $database;
@@ -41,6 +45,7 @@ class MongoDBSessionHandler implements SessionHandlerInterface {
         return true;
     }
 
+    // Kode di bawah digunakan untuk membaca data session dari collection 'sessions' berdasarkan session ID
     public function read(string $id): string|false {
         try {
             $query = new MongoDB\Driver\Query(['_id' => $id], ['limit' => 1]);
@@ -55,6 +60,7 @@ class MongoDBSessionHandler implements SessionHandlerInterface {
         return '';
     }
 
+    // Kode di bawah digunakan untuk menyimpan atau memperbarui data session (upsert) ke MongoDB
     public function write(string $id, string $data): bool {
         try {
             $bulk = new MongoDB\Driver\BulkWrite;
@@ -74,6 +80,7 @@ class MongoDBSessionHandler implements SessionHandlerInterface {
         }
     }
 
+    // Kode di bawah digunakan untuk menghapus data session dari MongoDB saat user logout
     public function destroy(string $id): bool {
         try {
             $bulk = new MongoDB\Driver\BulkWrite;
@@ -85,6 +92,7 @@ class MongoDBSessionHandler implements SessionHandlerInterface {
         return true;
     }
 
+    // Kode di bawah digunakan untuk pembersihan berkala (Garbage Collection) session yang sudah kedaluwarsa
     public function gc(int $max_lifetime): int|false {
         try {
             $bulk = new MongoDB\Driver\BulkWrite;
@@ -92,13 +100,13 @@ class MongoDBSessionHandler implements SessionHandlerInterface {
             $bulk->delete(['updated_at' => ['$lt' => $cutoff]]);
             $this->client->executeBulkWrite("{$this->database}.sessions", $bulk);
         } catch (\Throwable $e) {
-            // ignore
+            // Abaikan jika ada error pembersihan
         }
         return 1;
     }
 }
 
-// Aktifkan MongoDB Session Handler jika session belum berjalan
+// Kode di bawah digunakan untuk mendaftarkan MongoDBSessionHandler sebagai session save handler sistem jika session belum dimulai
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_strict_mode', 0);
@@ -106,10 +114,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_set_save_handler($sessionHandler, true);
 }
 
+// Kode di bawah adalah fungsi pembantu untuk menyisipkan satu dokumen baru ke dalam collection MongoDB
 function insertDocument($collection, $document) {
     global $client, $database;
     $bulk = new MongoDB\Driver\BulkWrite;
     
+    // Memberikan ObjectId unik jika dokumen belum memilikinya
     if (!isset($document['_id'])) {
         $document['_id'] = new MongoDB\BSON\ObjectId;
     }
@@ -120,6 +130,7 @@ function insertDocument($collection, $document) {
     return (string) $document['_id'];
 }
 
+// Kode di bawah adalah fungsi pembantu untuk memperbarui dokumen di collection MongoDB berdasarkan filter
 function updateDocument($collection, $filter, $update) {
     global $client, $database;
     $bulk = new MongoDB\Driver\BulkWrite;
@@ -128,6 +139,7 @@ function updateDocument($collection, $filter, $update) {
     return $result->getModifiedCount();
 }
 
+// Kode di bawah adalah fungsi pembantu untuk menghapus dokumen dari collection MongoDB berdasarkan filter
 function deleteDocument($collection, $filter) {
     global $client, $database;
     $bulk = new MongoDB\Driver\BulkWrite;
@@ -136,6 +148,7 @@ function deleteDocument($collection, $filter) {
     return $result->getDeletedCount();
 }
 
+// Kode di bawah adalah fungsi pembantu untuk mengambil banyak dokumen (SELECT) dari collection MongoDB
 function findDocuments($collection, $filter = [], $options = []) {
     global $client, $database;
     $query = new MongoDB\Driver\Query($filter, $options);
@@ -143,6 +156,7 @@ function findDocuments($collection, $filter = [], $options = []) {
     return $cursor->toArray();
 }
 
+// Kode di bawah adalah fungsi pembantu untuk mengambil satu dokumen pertama yang cocok dari collection MongoDB
 function findOneDocument($collection, $filter, $options = []) {
     global $client, $database;
     $query = new MongoDB\Driver\Query($filter, $options);
@@ -151,20 +165,21 @@ function findOneDocument($collection, $filter, $options = []) {
     return count($arr) > 0 ? $arr[0] : null;
 }
 
+// Kode di bawah adalah fungsi pembantu untuk menjalankan query agregasi (pipeline) di MongoDB
 function aggregate($collection, $pipeline) {
     global $client, $database;
     $command = new MongoDB\Driver\Command([
         'aggregate' => $collection,
-        'pipeline' => $pipeline, // Pipeline is already array of arrays, should work
+        'pipeline' => $pipeline,
         'cursor' => new stdClass()
     ]);
     $cursor = $client->executeCommand($database, $command);
     return $cursor->toArray();
 }
 
+// Kode di bawah adalah fungsi pembantu untuk menghitung jumlah total dokumen dalam collection
 function countDocuments($collection, $filter = []) {
     global $client, $database;
-    // MongoDB expects BSON document for query, not PHP array
     $query = empty($filter) ? new stdClass() : $filter;
     $command = new MongoDB\Driver\Command([
         'count' => $collection,
@@ -175,11 +190,12 @@ function countDocuments($collection, $filter = []) {
     return $result[0]->n ?? 0;
 }
 
+// Kode di bawah digunakan untuk memastikan akun pengguna Boss default sudah ada di dalam database
 function ensureBossUserExists() {
      global $client, $database;
      $existing = findOneDocument("pengguna", ["username" => "boss"]);
      if (!$existing) {
-         // Generate strong random password (12 characters)
+         // Membuat password acak yang kuat
          $random_pass = bin2hex(random_bytes(6));
          $password = password_hash($random_pass, PASSWORD_DEFAULT);
          insertDocument("pengguna", [
@@ -189,32 +205,33 @@ function ensureBossUserExists() {
              "must_change_password" => true,
              "created_at" => new MongoDB\BSON\UTCDateTime()
          ]);
-         // Log or display the password once (only on first setup)
+         // Mencatat password awal ke error log
          error_log("Initial boss password: $random_pass");
      }
- }
+}
 
+// Kode di bawah digunakan untuk membuat indeks (indexing) pada MongoDB demi mempercepat performa pencarian query
 function createIndexes() {
     global $client, $database;
 
     $indexes = [
-        // manifest collection
+        // Indeks untuk collection manifest
         ["manifest", ["created_by" => 1], "created_by_idx"],
         ["manifest", ["tanggal" => -1], "tanggal_idx"],
         ["manifest", ["kapal" => 1], "kapal_idx"],
         ["manifest", ["nopol" => 1], "nopol_idx"],
         ["manifest", ["created_by" => 1, "tanggal" => -1], "created_by_tanggal_idx"],
 
-        // muatan collection
+        // Indeks untuk collection muatan
         ["muatan", ["id_manifest" => 1], "id_manifest_idx"],
 
-        // master collections (unique)
+        // Indeks unik untuk master collections
         ["master_barang", ["nama" => 1], "nama_idx", true],
         ["master_kapal", ["nama" => 1], "nama_idx", true],
         ["master_jenis", ["kode" => 1], "kode_idx", true],
         ["master_nopol", ["nopol" => 1], "nopol_idx", true],
 
-        // pengguna collection (unique)
+        // Indeks unik untuk username akun pengguna
         ["pengguna", ["username" => 1], "username_idx", true]
     ];
 
@@ -237,13 +254,13 @@ function createIndexes() {
             ]);
             $client->executeCommand($database, $command);
         } catch (Exception $e) {
-            // Skip index creation errors (index might already exist)
+            // Melewati error jika index sudah ada sebelumnya
             error_log("Index creation skipped for {$idx[0]}: " . $e->getMessage());
         }
     }
 }
 
-// Inisialisasi admin boss atau indexes hanya jika dipanggil via parameter khusus ?init_db=1
+// Inisialisasi otomatis jika endpoint diakses dengan parameter khusus ?init_db=1
 if (isset($_GET['init_db']) && $_GET['init_db'] == '1') {
     try {
         ensureBossUserExists();
@@ -254,5 +271,4 @@ if (isset($_GET['init_db']) && $_GET['init_db'] == '1') {
         error_log("DB init error: " . $e->getMessage());
     }
 }
-
 ?>

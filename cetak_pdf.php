@@ -1,13 +1,17 @@
 <?php
+// Kode di bawah digunakan untuk memulai output buffer agar tidak ada karakter liar yang merusak binary file PDF
 ob_start();
+
+// Kode di bawah digunakan untuk memuat file koneksi MongoDB dan file utilitas fungsi
 require_once 'koneksi_mongodb.php';
 require_once 'functions.php';
 
+// Kode di bawah digunakan untuk memulai session jika belum aktif
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Pengecekan login
+// Kode di bawah digunakan untuk memeriksa apakah user sudah login, jika belum maka dialihkan ke login.php
 if (!isset($_SESSION['login_rifqy'])) {
     ob_end_clean();
     $_SESSION['error'] = 'Silakan login terlebih dahulu.';
@@ -15,26 +19,28 @@ if (!isset($_SESSION['login_rifqy'])) {
     exit;
 }
 
+// Kode di bawah digunakan untuk memuat library Dompdf via Composer autoloader
 require 'vendor/autoload.php';
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
+// Kode di bawah digunakan untuk menangkap dan memvalidasi format ID Manifest (ObjectId MongoDB 24-karakter hex)
 $id = $_GET['id'] ?? '';
 if (!$id || !preg_match('/^[a-f0-9]{24}$/', $id)) {
     die("ID Manifest tidak valid.");
 }
 
 try {
-    // Data Manifest
+    // Kode di bawah digunakan untuk mengambil data header manifest dari MongoDB berdasarkan ID
     $h_obj = findOneDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($id)]);
     if (!$h_obj) die("Data manifest tidak ditemukan.");
     $h = (array)$h_obj;
 
-    // Data Muatan
+    // Kode di bawah digunakan untuk mengambil semua daftar barang muatan yang terkait dengan manifest ini
     $muatan = findDocuments("muatan", ['id_manifest' => $id]);
 
-    // HTML Content with proper escaping
+    // Kode di bawah digunakan untuk merangkai template HTML dan CSS untuk layout dokumen cetak PDF
     $html = '
     <html>
     <head>
@@ -65,6 +71,7 @@ try {
             <h2>CARGO MANIFEST</h2>
         </div>
 
+        <!-- Bagian informasi kapal, jadwal keberangkatan, dan tujuan -->
         <div class="info-card">
             <table class="info-table">
                 <tr><td class="info-label">Nama Kapal</td><td class="info-sep">:</td><td>' . e($h['kapal'] ?? '-') . '</td></tr>
@@ -76,6 +83,7 @@ try {
             </table>
         </div>
 
+        <!-- Tabel rincian barang muatan -->
         <table class="data-table">
             <thead>
                 <tr>
@@ -90,6 +98,7 @@ try {
 
     $no = 1;
     $total_ton = 0;
+    // Melakukan perulangan (looping) untuk setiap baris data muatan barang
     foreach ($muatan as $m) {
         $m_arr = (array)$m;
         $html .= '
@@ -103,6 +112,7 @@ try {
         $total_ton += (float)($m_arr['ton'] ?? 0);
     }
 
+    // Kode di bawah digunakan untuk memprioritaskan total ton manual jika diisi, jika tidak maka memakai hitungan sistem
     $final_ton = (isset($h['total_ton_manual']) && $h['total_ton_manual'] != '0' && $h['total_ton_manual'] != '') ? $h['total_ton_manual'] : $total_ton;
 
     $html .= '
@@ -114,6 +124,7 @@ try {
             </tbody>
         </table>
 
+        <!-- Bagian tanda tangan resmi manifest -->
         <div class="signature-section">
             <div class="signature-date">Semarang,</div>
             <div>Hormat Kami,</div>
@@ -122,20 +133,21 @@ try {
     </body>
     </html>';
 
-    // Dompdf configuration
+    // Kode di bawah digunakan untuk mengonfigurasi opsi mesin generator Dompdf
     $options = new Options();
     $options->set('isHtml5ParserEnabled', true);
     $options->set('isRemoteEnabled', true);
 
+    // Kode di bawah digunakan untuk membuat objek Dompdf, memuat HTML, dan mengatur ukuran kertas A4 potret
     $dompdf = new Dompdf($options);
     $dompdf->loadHtml($html);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
 
-    // Pastikan tidak ada output sampah sebelum stream
+    // Kode di bawah digunakan untuk membersihkan buffer sebelum mengirim file PDF agar tidak corrupt
     ob_end_clean();
     
-    // Stream PDF with safe filename
+    // Kode di bawah digunakan untuk menyusun nama file PDF yang aman dan memicu download di browser
     $safe_kapal = preg_replace('/[^a-zA-Z0-9_-]/', '_', $h['kapal'] ?? 'Data');
     $safe_tanggal = preg_replace('/[^0-9_-]/', '_', $h['tanggal'] ?? date('Y-m-d'));
     $filename = "Manifest_{$safe_kapal}_{$safe_tanggal}.pdf";

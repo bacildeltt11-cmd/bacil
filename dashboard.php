@@ -1,35 +1,39 @@
 <?php
-// Security headers must be sent before any output
+// Kode di bawah digunakan untuk mengirimkan header HTTP keamanan ke browser sebelum konten HTML dirender
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
 header("X-XSS-Protection: 1; mode=block");
 header("Referrer-Policy: strict-origin-when-cross-origin");
 
+// Kode di bawah digunakan untuk memuat helper koneksi database MongoDB dan fungsi utilitas sistem
 require_once 'koneksi_mongodb.php';
 require_once 'functions.php';
 
+// Kode di bawah digunakan untuk memulai session jika belum berjalan
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Jika belum login (opsional, jika dashboard.php butuh login)
+// Kode di bawah digunakan untuk memeriksa status login; jika belum login, dialihkan ke login.php
 if(!isset($_SESSION['login_rifqy'])){
     header("Location: login.php");
     exit;
 }
 
+// Kode di bawah digunakan untuk menyimpan nama pengguna aktif dan mengecek apakah role-nya adalah Boss
 $nama_user = $_SESSION['login_rifqy'];
 $is_boss = isset($_SESSION['login_rifqy']) && $_SESSION['login_rifqy'] === 'Boss';
 
-// Handle CRUD actions for Boss
+// Kode di bawah digunakan untuk memproses aksi CRUD jadwal kapal (tambah, edit, hapus event) khusus untuk Boss
 if ($_SESSION['login_rifqy'] === 'Boss' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
-    // Verify CSRF token
+    // Memverifikasi token CSRF demi keamanan request form
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
     
+    // Penanganan aksi penambahan atau pengubahan event jadwal manifest
     if ($action === 'add_event' || $action === 'edit_event') {
         $id = $action === 'edit_event' ? ($_POST['event_id'] ?? null) : null;
         $kapal = sanitize_string($_POST['kapal'] ?? '');
@@ -39,6 +43,7 @@ if ($_SESSION['login_rifqy'] === 'Boss' && $_SERVER['REQUEST_METHOD'] === 'POST'
         $nopol = sanitize_string($_POST['nopol'] ?? '');
         $jam = $_POST['jam'] ?? '';
         
+        // Memvalidasi kelengkapan data form event jadwal
         $errors = [];
         if (empty($kapal)) $errors[] = "Nama kapal harus diisi";
         if (empty($tanggal) || !validate_date($tanggal)) $errors[] = "Format tanggal tidak valid";
@@ -58,9 +63,11 @@ if ($_SESSION['login_rifqy'] === 'Boss' && $_SERVER['REQUEST_METHOD'] === 'POST'
                 "created_by" => "Boss"
             ];
             
+            // Menyimpan event baru ke MongoDB jika aksi add_event
             if ($action === 'add_event') {
                 $result = insertDocument("manifest", $data);
                 $_SESSION['success'] = $result ? 'Jadwal berhasil ditambahkan' : 'Gagal menambahkan jadwal';
+            // Memperbarui event jika aksi edit_event
             } else {
                 $result = updateDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($id)], $data);
                 $_SESSION['success'] = $result ? 'Jadwal berhasil diperbarui' : 'Gagal memperbarui jadwal';
@@ -73,6 +80,7 @@ if ($_SESSION['login_rifqy'] === 'Boss' && $_SERVER['REQUEST_METHOD'] === 'POST'
         exit;
     }
     
+    // Penanganan aksi penghapusan jadwal manifest
     if ($action === 'delete_event') {
         $event_id = $_POST['event_id'] ?? null;
         if ($event_id) {
@@ -84,18 +92,19 @@ if ($_SESSION['login_rifqy'] === 'Boss' && $_SERVER['REQUEST_METHOD'] === 'POST'
     }
 }
 
-// Optimasi Dashboard: Ambil data secara efisien tanpa N+1 query
+// Kode di bawah digunakan untuk menghitung total seluruh manifest di dalam database
 $total_manifest = countDocuments("manifest", []);
 
-// Ambil 3 riwayat terbaru
+// Kode di bawah digunakan untuk mengambil 3 riwayat manifest paling baru untuk ditampilkan di panel ringkasan
 $riwayat_terbaru = findDocuments("manifest", [], ['sort' => ['_id' => -1], 'limit' => 3]);
 
-// Ambil semua manifest untuk Boss jadwal & statistik
+// Kode di bawah digunakan untuk mengambil semua dokumen manifest untuk diolah ke statistik chart & kalender
 $semua_manifest = findDocuments("manifest", []);
 
 $stats_data = [];
 $jadwal_manifest = [];
 
+// Melakukan looping untuk mengelompokkan jumlah manifest per bulan (data untuk grafik Chart.js)
 foreach ($semua_manifest as $m) {
     $m_arr = (array)$m;
     if (isset($m_arr['tanggal'])) {
@@ -104,15 +113,16 @@ foreach ($semua_manifest as $m) {
             $stats_data[$month] = ($stats_data[$month] ?? 0) + 1;
         }
     }
+    // Menyaring jadwal yang dibuat oleh Boss untuk ditampilkan di FullCalendar
     if (($m_arr['created_by'] ?? '') === 'Boss') {
         $jadwal_manifest[] = $m;
     }
 }
-ksort($stats_data); // Urutkan berdasarkan bulan
+ksort($stats_data); // Mengurutkan data bulan secara kronologis
 $chart_labels = json_encode(array_keys($stats_data));
 $chart_values = json_encode(array_values($stats_data));
 
-// Data dropdown untuk modal edit/tambah (fallback cepat)
+// Kode di bawah digunakan untuk memuat data opsi pilihan kapal, jenis kendaraan, dan nopol untuk modal form
 $master_kapal = findDocuments("master_kapal", []);
 $kapals = [];
 foreach($master_kapal as $k) $kapals[] = $k->nama;
@@ -128,7 +138,7 @@ $nopols = [];
 foreach($master_nopol as $n) $nopols[] = $n->nopol;
 if(empty($nopols)) $nopols = ['H 8454 QQ', 'H 1316 PH', 'H 1370 TA', 'H 8470 QQ', 'H 9773 BQ', 'H 8211 BA', 'AA 8519 OF', 'BA 9937 FU'];
 
-// Pre-fetch muatan count dengan 1x query aggregate (menghindari N+1 roundtrips ke MongoDB)
+// Kode di bawah melakukan agregasi jumlah item muatan per manifest dalam satu kali query (efisien, anti-lag)
 $muatan_counts_map = [];
 try {
     $muatan_aggr = aggregate("muatan", [
@@ -143,7 +153,7 @@ try {
     error_log("Gagal aggregate muatan count: " . $e->getMessage());
 }
 
-// Prepare events for FullCalendar
+// Kode di bawah digunakan untuk menyusun array event untuk dirender oleh FullCalendar
 $events = [];
 $tz = new DateTimeZone('Asia/Jakarta');
 
@@ -153,7 +163,6 @@ foreach ($jadwal_manifest as $m) {
     $jam = trim($m_arr['jam'] ?? '');
 
     if ($tgl !== '' && $jam !== '') {
-        // Parse waktu dengan validasi ketat dan fallback aman
         $dt = null;
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tgl)) {
             $dt = DateTime::createFromFormat('Y-m-d H:i', $tgl . ' ' . $jam, $tz) ?: null;
@@ -162,29 +171,27 @@ foreach ($jadwal_manifest as $m) {
             }
         }
 
-        // Fallback jika format tanggal non-standar namun masih valid parse
         if (!$dt) {
             try {
                 $dt = new DateTime($tgl . ' ' . $jam, $tz);
             } catch (\Throwable $e) {
-                // Jika string tanggal rusak (contoh: "ripkii 20:00"), gunakan waktu sekarang agar tidak crash
                 $dt = new DateTime('now', $tz);
             }
         }
 
-        $start = $dt->format('c'); // ISO8601 with offset
+        $start = $dt->format('c'); // Format ISO8601 dengan offset waktu
         $end_dt = clone $dt;
         $end_dt->add(new DateInterval('PT1H'));
-        // Jika berakhir keesokan hari, clamp ke 23:59:59
         if ($end_dt->format('Y-m-d') !== $dt->format('Y-m-d')) {
             $end_dt = clone $dt;
             $end_dt->setTime(23, 59, 59);
         }
         $end = $end_dt->format('c');
         $id = (string)$m_arr['_id'];
+        // Tautan redirect jika user adalah Operator: langsung menuju input muatan manifest tersebut
         $url = ($_SESSION['login_rifqy'] !== 'Boss') ? 'input_muatan.php?id=' . $id : '';
         $muatan_count = $muatan_counts_map[$id] ?? 0;
-        // Hijau (Selesai) jika manifest sudah dicetak / berstatus Selesai
+        // Penentuan warna event kalender: Hijau jika status Selesai, Kuning jika masih Menunggu
         $is_selesai = (isset($m_arr['status']) && $m_arr['status'] === 'Selesai');
         $status = $is_selesai ? 'Selesai' : 'Menunggu';
         $color = $is_selesai ? '#10b981' : '#f59e0b';
@@ -247,8 +254,7 @@ foreach ($jadwal_manifest as $m) {
             flex-wrap: wrap;
         }
 
-        .fc .fc-toolbar-title {
-            font-size: 17px !important;
+        .fc .fc-toolbar-title {            font-size: 17px !important;
             font-weight: 800 !important;
             color: #0f172a !important;
             letter-spacing: -0.2px;
@@ -257,7 +263,7 @@ foreach ($jadwal_manifest as $m) {
         /* Segmented Button Groups */
         .fc .fc-button-group {
             display: inline-flex !important;
-            background: #f1f5f9 !important;
+            background: #f9f3f1ff !important;
             border-radius: 10px !important;
             padding: 3px !important;
             gap: 3px !important;
@@ -267,7 +273,7 @@ foreach ($jadwal_manifest as $m) {
         .fc .fc-button {
             background: transparent !important;
             border: none !important;
-            color: #475569 !important;
+            color: #694c47ff !important;
             font-weight: 700 !important;
             font-size: 13px !important;
             padding: 6px 14px !important;
@@ -310,11 +316,11 @@ foreach ($jadwal_manifest as $m) {
         /* Table & Grid Styling */
         .fc-theme-standard th, 
         .fc-theme-standard td {
-            border-color: #f1f5f9 !important;
+            border-color: #f9f1f1ff !important;
         }
 
         .fc .fc-col-header-cell {
-            background: #f8fafc !important;
+            background: #fcf8f8ff !important;
             padding: 8px 4px !important;
             border-color: #e2e8f0 !important;
         }
@@ -1093,7 +1099,7 @@ foreach ($jadwal_manifest as $m) {
                             label: 'Jumlah Manifest',
                             data: chartValues,
                             backgroundColor: 'rgba(10, 77, 191, 0.2)',
-                            borderColor: 'rgba(191, 10, 10, 1)',
+                            borderColor: 'rgba(10, 77, 191, 1)',
                             borderWidth: 2,
                             borderRadius: 5
                         }]

@@ -1,64 +1,68 @@
 <?php
+// Kode di bawah digunakan untuk memuat file koneksi MongoDB dan kumpulan fungsi helper sistem
 require_once 'koneksi_mongodb.php';
 require_once 'functions.php';
 
+// Kode di bawah digunakan untuk memulai session jika belum berjalan
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Pengecekan login
+// Kode di bawah digunakan untuk memeriksa apakah user sudah login; jika belum, dialihkan ke login.php
 if (!isset($_SESSION['login_rifqy'])) {
     $_SESSION['error'] = 'Silakan login terlebih dahulu.';
     header("Location: login.php");
     exit;
 }
 
-// Generate CSRF token if not exists
+// Kode di bawah digunakan untuk menghasilkan token CSRF jika belum tersedia di session
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+// Kode di bawah digunakan untuk memeriksa apakah user yang login memiliki level hak akses 'Boss'
 $is_boss = isset($_SESSION['login_rifqy']) && $_SESSION['login_rifqy'] === 'Boss';
 
+// Kode di bawah digunakan untuk menangkap ID manifest jika sedang dalam mode edit keberangkatan
 $edit_id = $_GET['id'] ?? null;
 $edit_data = null;
 
-// Admin TIDAK BOLEH buka halaman ini langsung (tanpa ?id=).
-// Satu-satunya cara Admin masuk: klik event di kalender → ?id=xxx
+// Validasi proteksi akses: Admin/Operator hanya boleh masuk jika membawa parameter ?id= dari klik event kalender
 if (!$is_boss && !$edit_id) {
     $_SESSION['error'] = 'Akses ditolak. Silakan klik event dari Kalender terlebih dahulu.';
     header("Location: dashboard.php");
     exit;
 }
 
+// Mengambil data manifest dari MongoDB jika dalam mode edit
 if ($edit_id) {
      $obj = findOneDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($edit_id)]);
      if ($obj) $edit_data = (array)$obj;
 }
 
-// Logika lock:
-// - Jika Admin klik dari kalender (ada edit_id) → boleh jika manifest dibuat oleh Boss
-// - Jika Admin buat baru (tanpa edit_id) → TIDAK BOLEH (sudah diblok di atas)
-// - Boss selalu boleh
+// Logika Penguncian (Locking):
+// - Jika Admin membuka data yang belum diinput oleh Boss, sistem mengunci form agar tidak bisa disimpan sembarangan
 if (!$is_boss && $edit_id) {
      $is_locked = !$edit_data || ($edit_data['created_by'] ?? '') !== 'Boss';
 } else {
      $is_locked = false;
 }
 
-// Jika tombol "Simpan" diklik
+// Kode di bawah digunakan untuk memproses pengiriman form keberangkatan saat tombol "Simpan" ditekan
 if (isset($_POST['simpan'])) {
+    // Memverifikasi token CSRF demi keamanan request
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
 
-    // Cek apakah admin dilarang simpan karena Boss belum input jadwal
+    // Memblokir penyimpanan jika form dalam kondisi terkunci
     if ($is_locked) {
         $_SESSION['error'] = 'Anda tidak bisa menyimpan data karena Boss belum menginputkan jadwal keberangkatan hari ini.';
         header("Location: " . $_SERVER['PHP_SELF'] . ($edit_id ? "?id=$edit_id" : ''));
         exit;
     }
 
+    // Sanitasi dan validasi data input form keberangkatan
     $kapal   = sanitize_string($_POST['kapal'] ?? '');
     $tanggal = $_POST['tanggal'] ?? '';
     $tujuan  = sanitize_string($_POST['tujuan'] ?? '');
@@ -74,6 +78,7 @@ if (isset($_POST['simpan'])) {
     if (empty($nopol)) $errors[] = "Nomor polisi harus diisi";
     if (empty($jam)) $errors[] = "Jam berangkat harus diisi";
 
+    // Jika ada inputan yang tidak valid, kembalikan ke form beserta pesan error
     if (!empty($errors)) {
         $_SESSION['error'] = implode('<br>', $errors);
         header("Location: " . $_SERVER['PHP_SELF'] . ($edit_id ? "?id=$edit_id" : ''));
@@ -90,11 +95,13 @@ if (isset($_POST['simpan'])) {
         "created_by" => $_SESSION['login_rifqy']
     ];
 
+    // Menyimpan nomor polisi baru secara otomatis ke master_nopol jika belum terdaftar
     $cek_nopol = findOneDocument("master_nopol", ["nopol" => $nopol]);
     if (!$cek_nopol) {
         insertDocument("master_nopol", ["nopol" => $nopol]);
     }
 
+    // Memperbarui dokumen jika mode edit, atau menyisipkan dokumen baru jika tambah baru
     if ($edit_id) {
         $existing = findOneDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($edit_id)]);
         $data['created_by'] = $existing->created_by ?? $_SESSION['login_rifqy'];
@@ -104,6 +111,7 @@ if (isset($_POST['simpan'])) {
         $id_manifest = insertDocument("manifest", $data);
     }
 
+    // Mengalihkan alur: Boss kembali ke dashboard, sedangkan Admin diarahkan langsung ke input muatan barang
     if ($id_manifest) {
         if ($is_boss) {
             $_SESSION['success'] = 'Manifest berhasil dibuat';
@@ -119,8 +127,9 @@ if (isset($_POST['simpan'])) {
     }
 }
 
-// Handle tambah master dari modal (?modal=kapal/jenis/nopol)
+// Kode di bawah digunakan untuk memproses penambahan master data (kapal/jenis/nopol) langsung dari modal pop-up
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Tambah master kapal
     if (isset($_POST['add_kapal'])) {
         $nama = sanitize_string($_POST['nama'] ?? '');
         if ($nama) {
@@ -131,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: $url");
         exit;
     }
+    // Tambah master jenis kendaraan
     if (isset($_POST['add_jenis'])) {
         $kode = sanitize_string($_POST['kode'] ?? '');
         if ($kode) {
@@ -141,6 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: $url");
         exit;
     }
+    // Tambah master nomor polisi
     if (isset($_POST['add_nopol'])) {
         $nopol = sanitize_string($_POST['nopol'] ?? '');
         if ($nopol) {
@@ -153,23 +164,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Mengambil pilihan daftar master kapal dari database
 $master_kapal = findDocuments("master_kapal", []);
 $kapals = [];
 foreach($master_kapal as $k) $kapals[] = $k->nama;
 if(empty($kapals)) { $kapals = ['KM. DHARMA FERRY II', 'KM. DHARMA FERRY III']; }
 
+// Mengambil pilihan daftar master jenis kendaraan dari database
 $master_jenis = findDocuments("master_jenis", []);
 $jeniss = [];
 foreach($master_jenis as $j) $jeniss[] = $j->kode;
 if(empty($jeniss)) { $jeniss = ['TB', 'TS']; }
 
+// Mengambil pilihan daftar master nomor polisi dari database
 $master_nopol = findDocuments("master_nopol", []);
 $nopols = [];
 foreach($master_nopol as $n) $nopols[] = $n->nopol;
 if(empty($nopols)) { $nopols = ['H 8454 QQ', 'H 1316 PH', 'H 1370 TA', 'H 8470 QQ', 'H 9773 BQ', 'H 8211 BA', 'AA 8519 OF', 'BA 9937 FU']; }
 
+// Menentukan teks tombol aksi secara dinamis
 $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "Selanjutnya →");
-
 ?>
 
 <!DOCTYPE html>
@@ -178,6 +192,7 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cargo Manifest - Keberangkatan</title>
+    <!-- Memuat file styling CSS utama -->
     <link rel="stylesheet" href="style.css">
     <style>
         .container { display: flex; gap: 30px; }
@@ -201,7 +216,7 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
         }
         .lock-notice .lock-emoji { font-size: 22px; }
 
-        /* ===== MODAL - MODERN ===== */
+        /* Modal Dialog Styling */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.55);
@@ -268,16 +283,19 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
 </head>
 <body>
 <div class="layout-wrapper">
+    <!-- Memuat sidebar samping -->
     <?php include 'sidebar.php'; ?>
     <div class="main-content">
+        <!-- Memuat bar navigasi atas -->
         <?php include 'top_nav.php'; ?>
         <?php if(isset($_SESSION['success'])){ echo '<div class="alert alert-success" style="padding:12px 20px; background:#d4edda; color:#155724; border-radius:8px; margin-bottom:20px; border:1px solid #c3e6cb;">'.$_SESSION['success'].'</div>'; unset($_SESSION['success']); } if(isset($_SESSION['error'])){ echo '<div class="alert alert-danger" style="padding:12px 20px; background:#f8d7da; color:#721c24; border-radius:8px; margin-bottom:20px; border:1px solid #f5c6cb;">'.$_SESSION['error'].'</div>'; unset($_SESSION['error']); } ?>
         <div class="content-wrapper">
             <div class="container">
-                <!-- FORM INPUT DI SEBELAH KIRI -->
+                <!-- FORM INPUT DATA KEBERANGKATAN DI SISI KIRI -->
                 <div class="form-container">
                     <h3 class="header-title"><?= $edit_id ? "Edit Data Keberangkatan" : "Data Keberangkatan" ?></h3>
 
+                    <!-- Peringatan jika jadwal belum dibuat oleh Boss -->
                     <?php if ($is_locked): ?>
                     <div class="lock-notice">
                         <span class="lock-emoji">🔒</span>
@@ -286,10 +304,13 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                     <?php endif; ?>
 
                     <form method="POST" action="">
+                        <!-- Token CSRF untuk keamanan form -->
                         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
                         <?php if ($edit_id): ?>
                             <input type="hidden" name="id" value="<?= e($edit_id) ?>">
                         <?php endif; ?>
+                        
+                        <!-- Pilihan Nama Kapal -->
                         <div class="form-group">
                             <label>Nama Kapal</label>
                             <div class="select-group">
@@ -303,14 +324,20 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                                 <a href="?modal=kapal<?= $edit_id ? "&id=" . e($edit_id) : '' ?>" class="btn-tambah" title="Tambah Kapal Baru">+</a>
                             </div>
                         </div>
+
+                        <!-- Input Tanggal Keberangkatan -->
                         <div class="form-group">
                             <label>Tanggal Keberangkatan</label>
                             <input type="date" name="tanggal" class="form-control" value="<?= e($edit_data['tanggal'] ?? '') ?>" required>
                         </div>
+
+                        <!-- Input Tujuan Keberangkatan (Default: Semarang - Ketapang) -->
                         <div class="form-group">
                             <label>Tujuan Keberangkatan</label>
                             <input type="text" name="tujuan" class="form-control" value="<?= $edit_data ? e($edit_data['tujuan']) : 'Semarang - Ketapang' ?>" readonly>
                         </div>
+
+                        <!-- Pilihan Jenis Kendaraan -->
                         <div class="form-group">
                             <label>Jenis Kendaraan</label>
                             <div class="select-group">
@@ -324,6 +351,8 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                                 <a href="?modal=jenis<?= $edit_id ? "&id=" . e($edit_id) : '' ?>" class="btn-tambah" title="Tambah Jenis Baru">+</a>
                             </div>
                         </div>
+
+                        <!-- Pilihan Nomor Polisi Kendaraan -->
                         <div class="form-group">
                             <label>Nomor Polisi (Nopol)</label>
                             <div class="select-group">
@@ -338,10 +367,14 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                             </div>
                             <small style="color: var(--gray); font-size: 12px; display: block; margin-top: 4px;">Pilih nomor polisi dari daftar atau tambah yang baru.</small>
                         </div>
+
+                        <!-- Input Jam Berangkat -->
                         <div class="form-group">
                             <label>Jam Berangkat</label>
                             <input type="time" name="jam" class="form-control" value="<?= $edit_data ? $edit_data['jam'] : '' ?>" required>
                         </div>
+
+                        <!-- Tombol Aksi Simpan dan Batal -->
                         <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
                             <button type="submit" name="simpan" class="btn btn-primary" style="flex: 1; min-width: 140px;" <?= $is_locked ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>
                                 <?= $button_label ?>
@@ -352,7 +385,8 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                         </div>
                     </form>
                 </div>
-                <!-- KOTAK BIRU INFO DI SEBELAH KANAN -->
+
+                <!-- KOTAK BIRU PETUNJUK OPERATOR DI SISI KANAN -->
                 <div class="header-right">
                     <h1>CARGO MANIFEST</h1>
                     <h2>Data Keberangkatan</h2>
@@ -366,14 +400,12 @@ $button_label = $edit_id ? "Simpan Perubahan" : ($is_boss ? "Simpan Jadwal" : "S
                     </div>
                 </div>
             </div>
-
-
-
         </div>
     </div>
 </div>
 
 <script>
+// Kode JavaScript untuk menutup modal dialog saat klik area luar atau tombol Escape
 function closeModal(e, overlay) {
     if (e.target === overlay) {
         overlay.style.opacity = '0';
@@ -390,7 +422,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Auto open modal berdasarkan ?modal=kapal / jenis / nopol
+// Otomatis membuka modal yang sesuai jika ada parameter ?modal=kapal/jenis/nopol di URL
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     const m = params.get('modal');
@@ -404,8 +436,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- MODAL TAMBAH MASTER DATA (Improved UI) -->
-<!-- Modal Kapal -->
+<!-- MODAL FORM POPUP TAMBAH DATA MASTER -->
+<!-- Modal Tambah Kapal Baru -->
 <div id="modal-kapal" class="modal-overlay" style="display:none;" onclick="if (event.target === this) this.style.display='none'">
     <div class="modal" onclick="event.stopImmediatePropagation()">
         <div class="modal-header">
@@ -426,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Modal Jenis -->
+<!-- Modal Tambah Jenis Kendaraan Baru -->
 <div id="modal-jenis" class="modal-overlay" style="display:none;" onclick="if (event.target === this) this.style.display='none'">
     <div class="modal" onclick="event.stopImmediatePropagation()">
         <div class="modal-header">
@@ -447,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Modal Nopol -->
+<!-- Modal Tambah Nomor Polisi Baru -->
 <div id="modal-nopol" class="modal-overlay" style="display:none;" onclick="if (event.target === this) this.style.display='none'">
     <div class="modal" onclick="event.stopImmediatePropagation()">
         <div class="modal-header">

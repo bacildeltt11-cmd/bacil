@@ -1,7 +1,9 @@
 <?php
+// Kode di bawah digunakan untuk memuat file koneksi MongoDB dan file fungsi pembantu
 include_once "koneksi_mongodb.php";
 include_once "functions.php";
 
+// Kode di bawah digunakan untuk memulai session yang aman dengan proteksi HttpOnly dan Strict Mode
 if (session_status() === PHP_SESSION_NONE) {
     session_start([
         'cookie_httponly' => true,
@@ -9,40 +11,47 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 }
 
-// Generate CSRF token
+// Kode di bawah digunakan untuk membuat token keamanan CSRF acak jika belum tersedia di session
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// Jika sudah login, langsung lempar ke halaman input
+// Kode di bawah digunakan untuk memeriksa apakah user sudah login; jika sudah, langsung diarahkan ke halaman dashboard
 if(isset($_SESSION['login_rifqy'])){
     header("Location: dashboard.php");
     exit;
 }
 
+// Variabel penampung pesan error jika proses otentikasi login gagal
 $error_msg = '';
 
+// Kode di bawah digunakan untuk memproses form saat tombol login ditekan (metode POST)
 if(isset($_POST['login'])){
-    // Verify CSRF token
+    // Memverifikasi kecocokan token CSRF demi keamanan dari serangan form eksternal
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
     
+    // Membersihkan dan mengambil nilai username dan password yang diinputkan user
     $username = sanitize_string($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    // Validate inputs
+    // Memvalidasi agar username dan password tidak boleh kosong
     if (empty($username) || empty($password)) {
         $error_msg = "Username dan Password harus diisi!";
     } else {
-        // Sesuaikan dengan collection pengguna di MongoDB
+        // Mencari data pengguna di MongoDB collection 'pengguna' berdasarkan username
         $data = findOneDocument("pengguna", [
             "username" => $username
         ]);
 
+        // Memverifikasi kecocokan password yang diinput dengan hash password tersimpan (Bcrypt)
         if($data && password_verify($password, $data->password)){
+            // Memperbarui session ID untuk mencegah serangan session fixation
             session_regenerate_id(true);
+            // Menyimpan nama role pengguna (Boss / Operator) ke dalam session
             $_SESSION['login_rifqy'] = $data->nama_pengguna;
+            // Mengalihkan halaman ke dashboard
             header("Location: dashboard.php");
             exit;
         } else {
@@ -58,8 +67,10 @@ if(isset($_POST['login'])){
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CV. MANUNGGAL</title>
+    <!-- Memuat file CSS utama untuk styling elemen form dan tema warna -->
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Pengaturan layout responsif layar penuh untuk halaman login */
         body {
             min-height: 100vh;
             min-height: 100dvh;
@@ -96,20 +107,26 @@ if(isset($_POST['login'])){
 </head>
 <body>
 
+<!-- Kode di bawah adalah kotak kontainer kartu login -->
 <div class="login-container">
+    <!-- Bagian logo dan identitas aplikasi -->
     <div class="logo-area">
         <h1>CV. MANUNGGAL</h1>
         <p>Logistics & Cargo Manifest System</p>
     </div>
 
+    <!-- Menampilkan kotak peringatan merah jika login gagal -->
     <?php
     if(!empty($error_msg)){
         echo "<div class='alert'>$error_msg</div>";
     }
     ?>
 
+    <!-- Form login untuk menginput username dan password -->
     <form method="post">
+        <!-- Input tersembunyi token CSRF untuk validasi keamanan request -->
         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
+        
         <div class="form-group">
             <label>Username</label>
             <input type="text" name="username" class="form-control" placeholder="Masukkan username..." required>
@@ -120,6 +137,7 @@ if(isset($_POST['login'])){
             <input type="password" name="password" class="form-control" placeholder="Masukkan password..." required>
         </div>
 
+        <!-- Tombol submit untuk memproses verifikasi login -->
         <button type="submit" name="login" class="btn btn-primary btn-login">Login Sekarang</button>
     </form>
 

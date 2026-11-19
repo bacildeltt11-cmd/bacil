@@ -1,56 +1,66 @@
 <?php
+// Kode di bawah digunakan untuk memuat file koneksi MongoDB dan file utilitas sistem
 require_once 'koneksi_mongodb.php';
 require_once 'functions.php';
 
+// Kode di bawah digunakan untuk memulai session jika belum berjalan
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Pengecekan login
+// Kode di bawah digunakan untuk memeriksa apakah user sudah login ke sistem
 if (!isset($_SESSION['login_rifqy'])) {
     $_SESSION['error'] = 'Silakan login terlebih dahulu.';
     header("Location: login.php");
     exit;
 }
 
-// Generate CSRF token if not exists
+// Kode di bawah digunakan untuk menghasilkan token CSRF jika belum ada di session
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+// Membatasi akses: halaman input muatan ini hanya untuk role Operator/Admin, bukan untuk Boss
 if (isset($_SESSION['login_rifqy']) && $_SESSION['login_rifqy'] === 'Boss') {
     $_SESSION['error'] = 'Akses ditolak untuk pengguna Boss';
     header("Location: dashboard.php");
     exit;
 }
 
+// Mengambil ID manifest aktif dari URL atau session; jika tidak ada, arahkan ke input keberangkatan
 if (isset($_GET['id'])) {
      $_SESSION['id_manifest'] = $_GET['id'];
- } elseif (!isset($_SESSION['id_manifest'])) {
+} elseif (!isset($_SESSION['id_manifest'])) {
      header("Location: input_keberangkatan.php");
      exit;
- }
- $id_manifest = $_SESSION['id_manifest'];
+}
+$id_manifest = $_SESSION['id_manifest'];
 
- // Cek apakah manifest ini dibuat oleh Boss (per-manifest check, bukan per-hari)
- $manifest_data = findOneDocument("manifest", ["_id" => new MongoDB\BSON\ObjectId($id_manifest)]);
- $manifest_is_boss = $manifest_data && ($manifest_data->created_by ?? '') === 'Boss';
- $is_admin = isset($_SESSION['login_rifqy']) && $_SESSION['login_rifqy'] !== 'Boss';
- $is_locked = $is_admin && !$manifest_is_boss;
+// Memeriksa apakah manifest ini dibuat oleh akun Boss
+$manifest_data = findOneDocument("manifest", ["_id" => new MongoDB\BSON\ObjectId($id_manifest)]);
+$manifest_is_boss = $manifest_data && ($manifest_data->created_by ?? '') === 'Boss';
+$is_admin = isset($_SESSION['login_rifqy']) && $_SESSION['login_rifqy'] !== 'Boss';
+// Mengunci form jika manifest belum diisi/dibuat oleh akun Boss
+$is_locked = $is_admin && !$manifest_is_boss;
 
-// 1. MESIN UPDATE TOTAL MANUAL
+// ==========================================
+// 1. MESIN UPDATE TOTAL TONASE MANUAL
+// ==========================================
 if (isset($_POST['total_manual'])) {
+    // Memverifikasi token CSRF
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
 
     $total_baru = $_POST['total_manual'];
+    // Validasi nilai angka total tonase
     if (!is_numeric($total_baru) || $total_baru < 0) {
         $_SESSION['error'] = 'Total ton harus berupa angka positif';
         header("Location: input_muatan.php");
         exit;
     }
 
+    // Memperbarui nilai total_ton_manual di MongoDB
     updateDocument("manifest",
         ['_id' => new MongoDB\BSON\ObjectId($id_manifest)],
         ['$set' => ['total_ton_manual' => $total_baru]]
@@ -59,19 +69,22 @@ if (isset($_POST['total_manual'])) {
     exit;
 }
 
-// 2. MESIN SIMPAN BARANG
+// ==========================================
+// 2. MESIN SIMPAN BARANG MUATAN BARU
+// ==========================================
 if (isset($_POST['simpan_database'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
 
-    // Server-side block jika terkunci
+    // Blokir jika status form dalam keadaan terkunci
     if ($is_locked) {
         $_SESSION['error'] = 'Anda tidak bisa menyimpan data karena Boss belum menginputkan jadwal keberangkatan hari ini.';
         header("Location: input_muatan.php");
         exit;
     }
 
+    // Sanitasi dan validasi data input barang
     $nama   = sanitize_string($_POST['nama_barang'] ?? '');
     $pcs    = filter_var($_POST['pcs_barang'] ?? 0, FILTER_VALIDATE_INT);
     $ton    = filter_var($_POST['ton_barang'] ?? 0, FILTER_VALIDATE_FLOAT);
@@ -91,7 +104,7 @@ if (isset($_POST['simpan_database'])) {
         exit;
     }
 
-    // Validate barang exists in master list and fetch current pcs (case-insensitive)
+    // Memvalidasi apakah barang terdaftar di master_barang dan memeriksa stok PCS yang tersedia
     $masterObj = findOneDocument("master_barang", [
         "nama" => new MongoDB\BSON\Regex('^' . preg_quote($nama) . '$', 'i')
     ]);
@@ -100,18 +113,17 @@ if (isset($_POST['simpan_database'])) {
         header("Location: input_muatan.php");
         exit;
     }
-    // Cast to array to access pcs and canonical name
     $master = (array)$masterObj;
     $canonical_nama = $master['nama'] ?? $nama;
-    // Check available pcs in storage
     $available_pcs = intval($master['pcs'] ?? 0);
+    // Memeriksa apakah input pcs melebihi stok yang ada
     if ($pcs > $available_pcs) {
         $_SESSION['error'] = "Jumlah PCS yang dimasukkan ($pcs) melebihi stok tersedia ($available_pcs).";
         header("Location: input_muatan.php");
         exit;
     }
 
-    // Insert muatan record
+    // Menyisipkan data muatan ke dalam collection 'muatan'
     insertDocument("muatan", [
         "id_manifest" => $id_manifest,
         "nama_barang" => $canonical_nama,
@@ -120,19 +132,20 @@ if (isset($_POST['simpan_database'])) {
         "volume" => $vol
     ]);
 
-    // Reduce pcs in master_barang storage
+    // Mengurangi jumlah stok PCS pada master_barang secara otomatis
     updateDocument("master_barang", ["_id" => $masterObj->_id], [
         '$set' => ["pcs" => $available_pcs - $pcs]
     ]);
 }
 
-// 2.5 MESIN UPDATE BARANG
+// ==========================================
+// 2.5 MESIN UPDATE BARANG MUATAN (EDIT)
+// ==========================================
 if (isset($_POST['update_database'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed");
     }
 
-    // Server-side block jika terkunci
     if ($is_locked) {
         $_SESSION['error'] = 'Anda tidak bisa mengupdate data karena Boss belum menginputkan jadwal keberangkatan hari ini.';
         header("Location: input_muatan.php");
@@ -159,7 +172,7 @@ if (isset($_POST['update_database'])) {
         exit;
     }
 
-    // Validate barang exists in master list and fetch current pcs (case-insensitive)
+    // Validasi keberadaan barang di master_barang
     $masterObj = findOneDocument("master_barang", [
         "nama" => new MongoDB\BSON\Regex('^' . preg_quote($nama) . '$', 'i')
     ]);
@@ -168,23 +181,20 @@ if (isset($_POST['update_database'])) {
         header("Location: input_muatan.php");
         exit;
     }
-    // Cast to array to access pcs and canonical name
     $master = (array)$masterObj;
     $canonical_nama = $master['nama'] ?? $nama;
 
-    // Fetch existing muatan record to get previous pcs
+    // Menghitung selisih stok PCS lama dan stok PCS baru
     $oldMuatan = findOneDocument("muatan", ['_id' => new MongoDB\BSON\ObjectId($id_edit)]);
     $oldPcs = $oldMuatan ? intval($oldMuatan->pcs ?? 0) : 0;
-
-    // Calculate stock after reverting old pcs and applying new pcs
-    $available_pcs = intval($master['pcs'] ?? 0) + $oldPcs; // add back old pcs
+    $available_pcs = intval($master['pcs'] ?? 0) + $oldPcs;
     if ($pcs > $available_pcs) {
         $_SESSION['error'] = "Jumlah PCS yang dimasukkan ($pcs) melebihi stok tersedia ($available_pcs).";
         header("Location: input_muatan.php");
         exit;
     }
 
-    // Update muatan record
+    // Memperbarui data record muatan
     updateDocument("muatan",
         ['_id' => new MongoDB\BSON\ObjectId($id_edit)],
         ['$set' => [
@@ -195,8 +205,8 @@ if (isset($_POST['update_database'])) {
         ]]
     );
 
-    // Adjust master_barang pcs (subtract new pcs, add back old pcs difference)
-    $new_stock = $available_pcs - $pcs; // resulting stock after update
+    // Menyesuaikan kembali stok PCS pada master_barang
+    $new_stock = $available_pcs - $pcs;
     updateDocument("master_barang", ["_id" => $masterObj->_id], [
         '$set' => ["pcs" => $new_stock]
     ]);
@@ -205,9 +215,10 @@ if (isset($_POST['update_database'])) {
     exit;
 }
 
-// 3. MESIN HAPUS BARANG
+// ==========================================
+// 3. MESIN HAPUS BARANG MUATAN
+// ==========================================
 if (isset($_GET['hapus'])) {
-    // Server-side block jika terkunci
     if ($is_locked) {
         $_SESSION['error'] = 'Tidak bisa menghapus karena Boss belum menginputkan jadwal keberangkatan hari ini.';
         header("Location: input_muatan.php");
@@ -219,13 +230,12 @@ if (isset($_GET['hapus'])) {
     }
 
     $id_hapus = $_GET['hapus'];
-    // Retrieve the muatan record to restore stock
+    // Mengembalikan stok PCS barang ke master_barang sebelum data muatan dihapus
     $muatanObj = findOneDocument("muatan", ['_id' => new MongoDB\BSON\ObjectId($id_hapus)]);
     if ($muatanObj) {
         $muatan = (array)$muatanObj;
         $nama = $muatan['nama_barang'] ?? '';
         $pcs  = intval($muatan['pcs'] ?? 0);
-        // Update master stock by adding back the pcs (case-insensitive)
         $masterObj = findOneDocument("master_barang", [
             'nama' => new MongoDB\BSON\Regex('^' . preg_quote($nama) . '$', 'i')
         ]);
@@ -235,13 +245,13 @@ if (isset($_GET['hapus'])) {
             updateDocument("master_barang", ['_id' => $masterObj->_id], ['$set' => ['pcs' => $new_stock]]);
         }
     }
-    // Delete the muatan entry
+    // Menghapus data muatan dari database
     deleteDocument("muatan", ['_id' => new MongoDB\BSON\ObjectId($id_hapus)]);
     header("Location: input_muatan.php");
     exit;
 }
 
-// Ambil data edit jika ada parameter ?edit
+// Mengambil data item muatan jika sedang dalam mode edit (?edit=id)
 $edit_data = null;
 if (isset($_GET['edit'])) {
     $id_edit = $_GET['edit'];
@@ -249,7 +259,7 @@ if (isset($_GET['edit'])) {
     if ($edit_obj) $edit_data = (array)$edit_obj;
 }
 
-// Ambil data header untuk ditampilkan
+// Mengambil data header manifest untuk ditampilkan di kotak informasi atas
 $h_obj = findOneDocument("manifest", ['_id' => new MongoDB\BSON\ObjectId($id_manifest)]);
 $h = $h_obj ? (array)$h_obj : [];
 ?>
@@ -260,6 +270,7 @@ $h = $h_obj ? (array)$h_obj : [];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Input Muatan Lengkap - CV. MANUNGGAL</title>
+    <!-- Memuat file CSS utama -->
     <link rel="stylesheet" href="style.css">
     <style>
         .header-info { background: var(--light-blue); border-left: 5px solid var(--primary-blue); padding: 18px; border-radius: 8px; margin-bottom: 25px; }
@@ -316,166 +327,46 @@ $h = $h_obj ? (array)$h_obj : [];
         }
         .lock-notice .lock-emoji { font-size: 22px; }
 
-        /* ============================
-           RESPONSIVE PORTRAIT MOBILE
-        ============================ */
         @media (max-width: 768px) {
-            /* Reduce page padding */
-            div[style*="padding: 40px"], .content-wrapper {
-                padding: 12px 10px !important;
-            }
-
-            /* Header info: stack info + button vertically */
-            .header-info {
-                padding: 14px 12px !important;
-                border-radius: 12px !important;
-                margin-bottom: 14px !important;
-            }
-            .header-info-inner {
-                flex-direction: column !important;
-                align-items: stretch !important;
-                gap: 12px !important;
-            }
-            .header-info-inner > div {
-                width: 100% !important;
-            }
-            .header-info-inner > div a {
-                display: block !important;
-                width: 100% !important;
-                text-align: center !important;
-                min-height: 42px !important;
-                line-height: 42px !important;
-                padding: 0 !important;
-                border-radius: 8px !important;
-            }
-            .header-row {
-                grid-template-columns: 95px 6px 1fr !important;
-                font-size: 13px !important;
-                gap: 4px !important;
-            }
-
-            /* Master box: stack vertically */
-            .master-box {
-                flex-direction: column !important;
-                align-items: stretch !important;
-                gap: 10px !important;
-                padding: 14px 12px !important;
-                border-radius: 12px !important;
-                margin-bottom: 14px !important;
-            }
-            .master-box input {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-height: 48px !important;
-                font-size: 16px !important;
-                box-sizing: border-box !important;
-            }
-            .master-box button {
-                width: 100% !important;
-                min-height: 46px !important;
-                font-size: 14px !important;
-                font-weight: 700 !important;
-            }
-
-            /* Row input: Mobile friendly 2-column + full-width layout */
-            .form-scroll-wrapper {
-                width: 100% !important;
-                margin-bottom: 14px !important;
-            }
-            .row-input {
-                min-width: 0 !important;
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 10px !important;
-                padding: 14px 12px !important;
-                border-radius: 12px !important;
-                align-items: end !important;
-            }
-            /* Nama Barang spans full width */
-            .row-input .field:nth-child(1) {
-                grid-column: 1 / -1 !important;
-            }
-            /* Volume spans full width */
-            .row-input .field:nth-child(4) {
-                grid-column: 1 / -1 !important;
-            }
-            /* Action button spans full width */
-            .row-input > div:last-child {
-                grid-column: 1 / -1 !important;
-                width: 100% !important;
-            }
-            .row-input .field label {
-                font-size: 13px !important;
-                margin-bottom: 4px !important;
-                font-weight: 600 !important;
-            }
-            .row-input .field .form-control,
-            .row-input .field #search-box {
-                padding: 11px 12px !important;
-                font-size: 16px !important;
-                min-height: 48px !important;
-                min-width: 0 !important;
-                width: 100% !important;
-                border-radius: 10px !important;
-            }
-            .row-input > div:last-child .btn {
-                width: 100% !important;
-                min-height: 48px !important;
-                font-size: 15px !important;
-                border-radius: 10px !important;
-            }
-            .row-input > div:last-child a.btn {
-                margin-top: 6px !important;
-            }
-
-            /* Table wrapper with smooth scroll */
-            .table-wrapper {
-                margin-bottom: 14px !important;
-                overflow-x: auto !important;
-                width: 100% !important;
-                -webkit-overflow-scrolling: touch !important;
-                border-radius: 10px !important;
-            }
-            .table-custom {
-                display: table !important;
-                width: 100% !important;
-                min-width: 540px !important; 
-                font-size: 12px !important;
-            }
-            .table-custom th, .table-custom td {
-                padding: 10px 8px !important;
-                white-space: nowrap !important;
-            }
-
-            /* Nav actions: stack vertically */
-            .nav-actions {
-                flex-direction: column-reverse !important;
-                gap: 10px !important;
-                margin-top: 20px !important;
-            }
-            .nav-actions a {
-                width: 100% !important;
-                text-align: center !important;
-                display: block !important;
-            }
-
-            /* Lock notice */
-            .lock-notice {
-                font-size: 13px !important;
-                padding: 11px 14px !important;
-            }
+            div[style*="padding: 40px"], .content-wrapper { padding: 12px 10px !important; }
+            .header-info { padding: 14px 12px !important; border-radius: 12px !important; margin-bottom: 14px !important; }
+            .header-info-inner { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
+            .header-info-inner > div { width: 100% !important; }
+            .header-info-inner > div a { display: block !important; width: 100% !important; text-align: center !important; min-height: 42px !important; line-height: 42px !important; padding: 0 !important; border-radius: 8px !important; }
+            .header-row { grid-template-columns: 95px 6px 1fr !important; font-size: 13px !important; gap: 4px !important; }
+            .master-box { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; padding: 14px 12px !important; border-radius: 12px !important; margin-bottom: 14px !important; }
+            .master-box input { width: 100% !important; max-width: 100% !important; min-height: 48px !important; font-size: 16px !important; box-sizing: border-box !important; }
+            .master-box button { width: 100% !important; min-height: 46px !important; font-size: 14px !important; font-weight: 700 !important; }
+            .form-scroll-wrapper { width: 100% !important; margin-bottom: 14px !important; }
+            .row-input { min-width: 0 !important; display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; padding: 14px 12px !important; border-radius: 12px !important; align-items: end !important; }
+            .row-input .field:nth-child(1) { grid-column: 1 / -1 !important; }
+            .row-input .field:nth-child(4) { grid-column: 1 / -1 !important; }
+            .row-input > div:last-child { grid-column: 1 / -1 !important; width: 100% !important; }
+            .row-input .field label { font-size: 13px !important; margin-bottom: 4px !important; font-weight: 600 !important; }
+            .row-input .field .form-control, .row-input .field #search-box { padding: 11px 12px !important; font-size: 16px !important; min-height: 48px !important; min-width: 0 !important; width: 100% !important; border-radius: 10px !important; }
+            .row-input > div:last-child .btn { width: 100% !important; min-height: 48px !important; font-size: 15px !important; border-radius: 10px !important; }
+            .row-input > div:last-child a.btn { margin-top: 6px !important; }
+            .table-wrapper { margin-bottom: 14px !important; overflow-x: auto !important; width: 100% !important; -webkit-overflow-scrolling: touch !important; border-radius: 10px !important; }
+            .table-custom { display: table !important; width: 100% !important; min-width: 540px !important; font-size: 12px !important; }
+            .table-custom th, .table-custom td { padding: 10px 8px !important; white-space: nowrap !important; }
+            .nav-actions { flex-direction: column-reverse !important; gap: 10px !important; margin-top: 20px !important; }
+            .nav-actions a { width: 100% !important; text-align: center !important; display: block !important; }
+            .lock-notice { font-size: 13px !important; padding: 11px 14px !important; }
         }
     </style>
 </head>
 <body>
 <div class="layout-wrapper">
+    <!-- Memuat sidebar samping -->
     <?php include 'sidebar.php'; ?>
 <div class="main-content">
+         <!-- Memuat bar navigasi atas -->
          <?php include 'top_nav.php'; ?>
          <?php if(isset($_SESSION['success'])){ echo '<div class="alert alert-success" style="padding:12px 20px; background:#d4edda; color:#155724; border-radius:8px; margin-bottom:20px; border:1px solid #c3e6cb;">'.$_SESSION['success'].'</div>'; unset($_SESSION['success']); } if(isset($_SESSION['error'])){ echo '<div class="alert alert-danger" style="padding:12px 20px; background:#f8d7da; color:#721c24; border-radius:8px; margin-bottom:20px; border:1px solid #f5c6cb;">'.$_SESSION['error'].'</div>'; unset($_SESSION['error']); } ?>
         <div class="content-wrapper">
             <div class="container">
 
+                <!-- Kotak ringkasan informasi kapal manifest aktif -->
                 <div class="header-info">
                     <div class="header-info-inner">
                         <div class="header-row">
@@ -487,17 +378,20 @@ $h = $h_obj ? (array)$h_obj : [];
                             <span>Jam</span><span>:</span><span><?= e($h['jam'] ?? '') ?> WIB</span>
                         </div>
                         <div>
+                            <!-- Tombol edit informasi keberangkatan -->
                             <a href="input_keberangkatan.php?id=<?= e($id_manifest) ?>" class="btn btn-sm btn-secondary" style="background: var(--primary-blue); color: white;">✏️ Edit Keberangkatan</a>
                         </div>
                     </div>
                 </div>
 
+                <!-- Kotak oranye untuk menambahkan nama master barang baru secara cepat -->
                 <div class="master-box">
                     <strong>Daftarkan Barang Baru:</strong>
                     <input id="inputBaru" placeholder="Ketik nama barang..." style="max-width: 300px; width: 100%;">
                     <button onclick="tambahKeMaster()" style="background: orange; color: white; border: none; cursor: pointer; padding: 0 15px; border-radius: 8px;">+ Masukkan History</button>
                 </div>
 
+                <!-- Notifikasi jika form dalam kondisi terkunci -->
                 <?php if ($is_locked): ?>
                 <div class="lock-notice">
                     <span class="lock-emoji">🔒</span>
@@ -505,6 +399,7 @@ $h = $h_obj ? (array)$h_obj : [];
                 </div>
                 <?php endif; ?>
 
+                <!-- Form Baris Input Muatan Barang (Nama Barang, PCS, Ton, Volume) -->
                 <div class="form-scroll-wrapper">
                 <form method="POST" autocomplete="off">
                     <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
@@ -512,17 +407,20 @@ $h = $h_obj ? (array)$h_obj : [];
                         <input type="hidden" name="id_edit" value="<?= e($_GET['edit']) ?>">
                     <?php endif; ?>
                     <div class="row-input">
+                        <!-- Input pencarian autocomplete barang dari master -->
                         <div class="field">
                             <label>Nama Barang (Ketik/Pilih)</label>
                             <input type="text" id="search-box" name="nama_barang" placeholder="🔍 Ketik nama barang untuk mencari atau pilih dari daftar..."
                                    onfocus="tampilkanSemua()" onkeyup="filterBarang()"
                                    value="<?= $edit_data ? e($edit_data['nama_barang']) : '' ?>" required>
+                            <!-- Daftar dropdown autocomplete -->
                             <div id="dropdownBarang" class="dropdown-list"></div>
                         </div>
                          <div class="field"><label>PCS</label><input type="number" name="pcs_barang" class="form-control" value="<?= $edit_data ? e($edit_data['pcs']) : '' ?>"></div>
                          <div class="field"><label>Ton</label><input type="number" step="0.01" name="ton_barang" class="form-control" value="<?= $edit_data ? e($edit_data['ton']) : '' ?>" required></div>
                          <div class="field"><label>Volume</label><input type="text" name="vol_barang" class="form-control" value="<?= $edit_data ? (isset($edit_data['volume']) ? e($edit_data['volume']) : '') : '' ?>"></div>
 
+                         <!-- Tombol Simpan atau Perbarui Muatan -->
                          <div style="display: flex; gap: 5px; align-items: flex-end;">
                              <?php if ($edit_data): ?>
                                  <button type="submit" name="update_database" class="btn btn-primary" style="width: 100%;" <?= $is_locked ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>Update</button>
@@ -535,13 +433,17 @@ $h = $h_obj ? (array)$h_obj : [];
                 </form>
                 </div>
 
+                <!-- Petunjuk scroll horizontal tabel -->
                 <div class="table-scroll-hint"><span class="hint-icon">👈</span> Geser tabel ke samping untuk melihat data lengkap <span class="hint-icon">👉</span></div>
+                
+                <!-- Tabel Daftar Muatan Barang yang Sudah Masuk -->
                 <div class="table-wrapper">
                 <table class="table-custom">
                     <thead><tr><th>NO</th><th>NAMA BARANG</th><th>PCS</th><th>TON</th><th>VOLUME</th><th>AKSI</th></tr></thead>
                     <tbody>
                         <?php
                         $no = 1; $total_sist = 0;
+                        // Mengambil seluruh item muatan untuk manifest ini
                         $res = findDocuments("muatan", ["id_manifest" => $id_manifest]);
                         foreach($res as $m_obj){
                             $m = (array)$m_obj;
@@ -558,6 +460,7 @@ $h = $h_obj ? (array)$h_obj : [];
                         ?>
                     </tbody>
                     <tfoot>
+                        <!-- Baris Input Total Tonase Manual -->
                         <tr class="total-row">
                             <td colspan="3" style="text-align: center;">TOTAL TON</td>
                             <td colspan="3">
@@ -574,6 +477,7 @@ $h = $h_obj ? (array)$h_obj : [];
                 </table>
                 </div>
 
+                <!-- Tombol Navigasi Bawah -->
                 <div class="nav-actions">
                     <a href="dashboard.php" style="color:var(--gray); text-decoration:none; font-weight: bold;">← Kembali</a>
                     <a href="preview_manifest.php?id=<?= e($id_manifest) ?>" class="btn btn-primary" <?= $is_locked ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>Lihat Manifest (Cetak) →</a>
@@ -581,9 +485,11 @@ $h = $h_obj ? (array)$h_obj : [];
             </div>
 
 <script>
+// Kode JavaScript di bawah mengelola dropdown autocomplete nama barang dari API master
 let masterBrg = [];
 const csrfToken = '<?= e($_SESSION['csrf_token']) ?>';
 
+// Mengambil data master barang dari endpoint API secara asinkron (AJAX fetch)
 async function loadMaster() {
     try {
         let resp = await fetch('api_master_barang.php?action=get');
@@ -593,6 +499,7 @@ async function loadMaster() {
     }
 }
 
+// Menampilkan daftar opsi barang ke elemen dropdown HTML
 function renderDropdown(data) {
     let list = document.getElementById("dropdownBarang");
     list.innerHTML = "";
@@ -610,6 +517,7 @@ function renderDropdown(data) {
     }
 }
 
+// Menyaring daftar nama barang sesuai kata kunci yang diketik user
 function filterBarang() {
     let key = document.getElementById("search-box").value.toLowerCase();
     let filtered = masterBrg.filter(i => i.toLowerCase().includes(key));
@@ -618,11 +526,13 @@ function filterBarang() {
 
 function tampilkanSemua() { renderDropdown(masterBrg); }
 
+// Mengisi input form nama barang ketika item dropdown diklik
 function setPilihan(val) {
     document.getElementById("search-box").value = val;
     document.getElementById("dropdownBarang").style.display = "none";
 }
 
+// Menambahkan nama barang baru ke database master via API POST
 async function tambahKeMaster() {
     let baru = document.getElementById("inputBaru").value.trim();
     if(baru) {
@@ -647,6 +557,7 @@ async function tambahKeMaster() {
     }
 }
 
+// Menghapus barang dari daftar master via API
 async function hapusHistory(e, item) {
     e.stopPropagation();
     if(confirm(`Hapus "${item}" dari history Database?`)) {
@@ -671,6 +582,7 @@ async function hapusHistory(e, item) {
 
 loadMaster();
 
+// Menutup dropdown autocomplete jika user mengklik area luar
 window.onclick = function(e) {
     if (!e.target.matches('#search-box')) {
         document.getElementById("dropdownBarang").style.display = "none";
