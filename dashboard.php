@@ -1093,7 +1093,7 @@ foreach ($jadwal_manifest as $m) {
                             label: 'Jumlah Manifest',
                             data: chartValues,
                             backgroundColor: 'rgba(10, 77, 191, 0.2)',
-                            borderColor: 'rgba(10, 77, 191, 1)',
+                            borderColor: 'rgba(191, 10, 10, 1)',
                             borderWidth: 2,
                             borderRadius: 5
                         }]
